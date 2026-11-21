@@ -258,3 +258,85 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
 .numbers.n3 { grid-template-columns: repeat(3, 1fr); }
 .bump { animation: bump .5s; display: inline-block; }
 @keyframes bump { 0% { transform: scale(1.3); color: var(--ok); } }
+
+/* ---------- v1.4: pauza, kolory porównań, znacznik Schultego, prompt sfery ---------- */
+:root { --same-bg: #dcf1e4; --same-fg: #1f6a43; --diff-bg: #f7e0e0; --diff-fg: #8c2f2f; }
+@media (prefers-color-scheme: dark) {
+  :root { --same-bg: rgba(110, 190, 145, .18); --same-fg: #a9dcbe; --diff-bg: rgba(225, 120, 120, .18); --diff-fg: #f0b3b3; }
+}
+.samediff .btn { border-color: transparent; }
+.btn.same { background: var(--same-bg); color: var(--same-fg); }
+.btn.diff { background: var(--diff-bg); color: var(--diff-fg); }
+
+.pause-overlay { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(8px); }
+.pause-overlay[hidden] { display: none; }
+.pause-box { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.pause-title { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+
+/* Schulte: znacznik środka za cyfrą (nieparzyste) albo w szczelinie (parzyste) */
+.focus-dot { width: 6px !important; height: 6px !important; margin: -3px !important; opacity: .9 !important; box-shadow: none !important; }
+.cell.center-cell { position: relative; isolation: isolate; }
+.cell.center-cell::before { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%;
+  background: var(--pivot); opacity: .85; z-index: -1; }
+
+/* Widzenie sferyczne: pytanie nad kołem, krótko także w środku */
+.field-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.prompt { font-size: 20px; font-weight: 700; text-align: center; min-height: 28px; color: var(--accent); }
+.cross.ask { font-size: 22px; font-weight: 700; color: var(--accent); }
+
+/* ---------- Widok poziomy (iPhone obrócony) ---------- */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --fh: calc(100dvh - 92px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .screen { max-width: 1100px; min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .bar { padding: 0 8px; }
+  .bar h1 { font-size: 15px; }
+  .back { font-size: 28px; }
+  .screen-body { padding: 4px 16px 16px; }
+  .screen-body.center { padding-bottom: 16px; }
+
+  /* Ekran główny: plan po lewej, lista ćwiczeń po prawej */
+  .hero { padding: 8px 16px 0; }
+  .hero h1 { font-size: 24px; }
+  .screen-body.home { display: grid; grid-template-columns: minmax(260px, 1fr) 1.5fr; column-gap: 16px; align-items: start; }
+  .screen-body.home > * { grid-column: 2; }
+  .screen-body.home > .plan { grid-column: 1; grid-row: 1 / span 30; position: sticky; top: 8px; }
+  .home .cards { display: grid; grid-template-columns: 1fr 1fr; }
+  .home h2.group.big { margin-top: 0; }
+
+  /* Sesja: sterowanie w kolumnie po lewej, ćwiczenie po prawej */
+  .screen-body.in-session { display: grid; grid-template-columns: 168px 1fr; gap: 16px; align-items: center; padding-bottom: 8px; }
+  .in-session .controls { position: static; padding: 0; gap: 10px; align-self: center; }
+  .in-session .ctl-row { grid-template-columns: 1fr; gap: 8px; }
+  .in-session .ctl-info { order: -1; }
+  .in-session .lvl-row { flex-direction: column; gap: 4px; }
+  .in-session .hint { display: none; }
+  .in-session .stage { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 20px; min-width: 0; }
+  .in-session .stage > .status, .in-session .stage > .rsvp, .in-session .stage > .progress, .in-session .stage > .row,
+  .in-session .stage > .paircard, .in-session .stage > .reading, .in-session .stage > .banner, .in-session .stage > div:not([class]) + div:not([class]) { flex-basis: 100%; }
+  .status { padding: 0; font-size: 15px; }
+  .field-wrap { width: auto; }
+  .field { width: auto; height: calc(var(--fh) - 34px); max-width: 100%; }
+  .field.wide { height: auto; width: min(100%, calc(var(--fh) * 1.6)); }
+  .field.tall { aspect-ratio: 16 / 9; height: var(--fh); }
+  .answers { width: 260px; min-height: 0; }
+  .grid3 .btn { min-height: 52px; }
+  .schulte { height: calc(var(--fh) - 20px); width: auto; }
+  .letters { grid-template-columns: repeat(16, 1fr); width: 100%; }
+  .cell.small { font-size: 18px; }
+  .numbers { grid-template-columns: repeat(5, 1fr); width: 100%; }
+  .numbers.n3 { grid-template-columns: repeat(4, 1fr); }
+  .numbers .cell { min-height: 44px; }
+  .flash { width: 260px; height: 120px; }
+  .keypad .btn { min-height: 42px; }
+  .typed { font-size: 24px; min-height: 30px; margin-bottom: 4px; }
+  .paircard { padding: 22px 16px; }
+  .rsvp { height: 120px; }
+  .countdown { font-size: 44px; }
+  .result { max-width: 720px; margin: 0 auto; width: 100%; }
+  .chart { max-height: 220px; }
+  .modal .sheet { max-height: 92dvh; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .in-session .stage > div:has(> .samediff) { flex-basis: 100%; }
+}

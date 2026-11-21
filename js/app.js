@@ -133,6 +133,11 @@ function chips(options, value, onChange) {
   return wrap;
 }
 
+/** Przyciski porównania: „Różne” po lewej (czerwony), „Takie same” po prawej (zielony). */
+const sameDiff = (res) => h('div', { class: 'row samediff' },
+  h('button', { class: 'btn big diff', onclick: () => res(false) }, '≠ Różne'),
+  h('button', { class: 'btn big same', onclick: () => res(true) }, '= Takie same'));
+
 const startBtn = (onclick) => h('button', { class: 'btn primary big', onclick }, `Start · ${DURATION === 60 ? '1 min' : DURATION + ' s'}`);
 
 function lastResult(id) {
@@ -167,7 +172,7 @@ function chart(history, unit) {
   }
   svg.append(svgEl('line', { x1: L, x2: W - R, y1: y(best), y2: y(best), class: 'bestline' }));
   if (pts.length > 1) svg.append(svgEl('polyline', { points: pts.map((p, i) => `${x(i)},${y(p.v)}`).join(' '), class: 'line' }));
-  pts.forEach((p, i) => svg.append(svgEl('circle', { cx: x(i), cy: y(p.v), r: i === pts.length - 1 ? 5.5 : 3, class: i === pts.length - 1 ? 'pt last' : 'pt' })));
+  pts.forEach((p, i) => svg.append(svgEl('circle', { cx: x(i), cy: y(p.v), r: i === pts.length - 1 ? 5.5 : 3.5, class: (i === pts.length - 1 ? 'pt last' : 'pt') + (p.partial != null ? ' partial' : '') })));
   const d = (t) => { const dt = new Date(t); return `${dt.getDate()}.${String(dt.getMonth() + 1).padStart(2, '0')}`; };
   const t1 = svgEl('text', { x: L, y: H - 6, class: 'axis' }); t1.textContent = d(pts[0].t); svg.append(t1);
   if (pts.length > 1) { const t2 = svgEl('text', { x: W - R, y: H - 6, 'text-anchor': 'end', class: 'axis' }); t2.textContent = d(pts.at(-1).t); svg.append(t2); }
@@ -175,25 +180,31 @@ function chart(history, unit) {
   return h('div', { class: 'chart-box' },
     h('div', { class: 'chart-head' }, h('b', {}, 'Postęp'), h('span', { class: 'muted small' }, `${pts.length} ${pts.length === 1 ? 'sesja' : 'sesji'} · śr. z 5 ost.: ${num(Math.round(avg(vals.slice(-5)) * 10) / 10)}`)),
     svg,
-    h('div', { class: 'legend small muted' }, h('span', { class: 'lg-line' }), `wyniki (${unit})`, h('span', { class: 'lg-best' }), 'rekord'),
+    h('div', { class: 'legend small muted' }, h('span', { class: 'lg-line' }), `wyniki (${unit})`, h('span', { class: 'lg-best' }), 'rekord',
+      pts.some((p) => p.partial != null) ? [h('span', { class: 'lg-partial' }), 'zakończona wcześniej'] : null),
     pts.length === 1 ? h('p', { class: 'muted small' }, 'Pierwsza sesja — linia trendu pojawi się po kolejnej.') : null);
 }
 
-/* ---------- Sesja na czas: Stop / Od nowa / licznik / wynik ---------- */
+/* ---------- Sesja na czas: Pauza / Zakończ / licznik / poziom / wynik ---------- */
 /**
- * def: { id, name, unit, onSetup, start(stage, api), lines?(extra), onFinish?(extra),
+ * def: { id, name, unit, onSetup, level?: {key, max}, start(stage, api), lines?(extra), onFinish?(extra),
  *        finalize?(stage, extra, reason, signal) => {score, lines, skip} }
- * api: { signal, alive, add(n), extra, end() }
+ * reason: 'time' (minął czas) | 'stop' (przycisk Zakończ) | 'end' (ćwiczenie samo się skończyło)
+ * api: { signal, alive, paused, level, sleep(ms), elapsed(), add(n), answer(good), extra, end() }
  */
 function session(body, parentSignal, def) {
   let run = null;
-  const kill = () => { if (run) { run.ended = true; clearInterval(run.iv); run.ctl.abort(); } };
+  const kill = () => {
+    if (!run) return;
+    run.ended = true; clearInterval(run.iv); run.ctl.abort();
+    run.waiters.splice(0).forEach((f) => f());
+  };
   parentSignal.addEventListener('abort', kill, { once: true });
 
   const begin = async () => {
     kill();
     const ctl = new AbortController();
-    const r = run = { ctl, score: 0, extra: {}, ended: false, t0: 0, iv: null };
+    const r = run = { ctl, score: 0, extra: {}, ended: false, t0: 0, iv: null, paused: false, pausedMs: 0, pauseAt: 0, waiters: [], ev: new EventTarget() };
     const timeEl = h('span', { class: 'mono time' }, `${DURATION} s`);
     const scoreEl = h('b', { class: 'score mono' }, '0');
     const fill = h('div');
@@ -204,19 +215,59 @@ function session(body, parentSignal, def) {
     const dots = h('span', { class: 'dots' });
     const drawDots = () => dots.replaceChildren(...Array.from({ length: UP_AFTER }, (_, i) => h('i', { class: i < st.streak ? 'on' : '' })));
     if (st) { st.maxLevel = st.level; Object.assign(r.extra, { levelStart: st.level, level: st.level, maxLevel: st.level, hits: 0, trials: 0 }); drawDots(); }
+
+    const elapsed = () => (r.t0 ? ((r.paused ? r.pauseAt : performance.now()) - r.t0 - r.pausedMs) / 1000 : 0);
+    const pause = () => {
+      if (r.paused || r.ended || !r.t0) return;
+      r.paused = true; r.pauseAt = performance.now();
+      overlay.hidden = false; r.ev.dispatchEvent(new Event('pause'));
+    };
+    const resume = () => {
+      if (!r.paused) return;
+      r.pausedMs += performance.now() - r.pauseAt; r.paused = false;
+      overlay.hidden = true;
+      r.waiters.splice(0).forEach((f) => f());
+    };
+    const stop = () => { overlay.hidden = true; finish(r, stage, 'stop'); };
+
+    const overlay = h('div', { class: 'pause-overlay', hidden: true },
+      h('div', { class: 'pause-box' },
+        h('div', { class: 'pause-title' }, '⏸ Pauza'),
+        h('button', { class: 'btn primary big wide', onclick: resume }, '▶ Wznów'),
+        h('button', { class: 'btn wide', onclick: begin }, '↻ Od nowa'),
+        h('button', { class: 'btn wide', onclick: stop }, '⏹ Zakończ i zapisz wynik')));
     const controls = h('div', { class: 'controls' },
       h('div', { class: 'ctl-row' },
-        h('button', { class: 'btn ctl', onclick: () => { kill(); body.classList.remove('in-session'); def.onSetup(); } }, '■ Stop'),
+        h('button', { class: 'btn ctl', onclick: pause, 'aria-label': 'Pauza' }, '⏸ Pauza'),
         h('div', { class: 'ctl-info' }, timeEl, h('span', { class: 'muted' }, `${def.unit}: `, scoreEl)),
-        h('button', { class: 'btn ctl', onclick: begin }, '↻ Od nowa')),
-      st ? h('div', { class: 'lvl-row' }, lvlEl, dots, h('span', { class: 'muted small' }, `${UP_AFTER}× dobrze = ▲ · błąd = ▼`)) : null,
+        h('button', { class: 'btn ctl', onclick: stop }, '⏹ Zakończ')),
+      st ? h('div', { class: 'lvl-row' }, lvlEl, dots, h('span', { class: 'muted small hint' }, `${UP_AFTER}× dobrze = ▲ · błąd = ▼`)) : null,
       h('div', { class: 'timebar' }, fill));
     body.classList.add('in-session');
-    body.replaceChildren(controls, stage);
+    body.replaceChildren(controls, stage, overlay);
+
+    const waitUnpaused = () => (r.paused ? new Promise((res) => r.waiters.push(res)) : Promise.resolve());
+    const abortErr = () => new DOMException('abort', 'AbortError');
     const api = {
       signal: ctl.signal,
       get alive() { return !r.ended && !ctl.signal.aborted; },
+      get paused() { return r.paused; },
       get level() { return st?.level ?? 1; },
+      elapsed,
+      /** sleep, który zatrzymuje się na czas pauzy */
+      async sleep(ms) {
+        let left = ms;
+        while (left > 0) {
+          await waitUnpaused();
+          if (ctl.signal.aborted) throw abortErr();
+          const s = performance.now();
+          let onPause;
+          const paused = new Promise((res) => { onPause = res; r.ev.addEventListener('pause', res, { once: true }); });
+          await Promise.race([sleep(left, ctl.signal), paused]);
+          r.ev.removeEventListener('pause', onPause);
+          left -= performance.now() - s;
+        }
+      },
       add(n = 1) { if (!api.alive) return; r.score += n; scoreEl.textContent = r.score; },
       /** Zgłoś wynik próby: liczy trafienia, zmienia poziom i zapamiętuje go. */
       answer(good) {
@@ -240,7 +291,8 @@ function session(body, parentSignal, def) {
     try { await countdown(stage, ctl.signal); } catch { return; }
     r.t0 = performance.now();
     r.iv = setInterval(() => {
-      const left = DURATION - (performance.now() - r.t0) / 1000;
+      if (r.paused) return;
+      const left = DURATION - elapsed();
       if (left <= 0) { finish(r, stage, 'time'); return; }
       timeEl.textContent = `${Math.ceil(left)} s`;
       fill.style.width = `${(1 - left / DURATION) * 100}%`;
@@ -250,19 +302,26 @@ function session(body, parentSignal, def) {
   };
 
   const finish = async (r, stage, reason) => {
-    if (r.ended) return;
-    r.ended = true; clearInterval(r.iv);
-    r.extra.seconds = Math.min(DURATION, (performance.now() - r.t0) / 1000);
+    if (r.ended || !r.t0) return;
+    r.extra.seconds = Math.min(DURATION, ((r.paused ? r.pauseAt : performance.now()) - r.t0 - r.pausedMs) / 1000);
+    r.ended = true; clearInterval(r.iv); r.paused = false;
+    if (reason === 'stop' && r.extra.seconds < DURATION - 0.5) r.extra.partial = Math.round(r.extra.seconds);
     let score = r.score; let skip = false;
     const x = r.extra;
     let lines = [
+      x.partial != null ? `Zakończone wcześniej — po ${x.partial} s z ${DURATION} s` : '',
       ...(def.level ? [`Poziom: ${x.levelStart} → ${x.level} (najwyższy: ${x.maxLevel})`,
         `Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`] : []),
       ...(def.lines ? def.lines(x) : [])];
     if (def.finalize) {
-      try { ({ score, lines = [], skip = false } = await def.finalize(stage, r.extra, reason, r.ctl.signal)); } catch { return; }
+      try {
+        const out = await def.finalize(stage, r.extra, reason, r.ctl.signal);
+        ({ score, skip = false } = out);
+        lines = [lines[0], ...(out.lines || [])];
+      } catch { return; }
     }
     r.ctl.abort();
+    r.waiters.splice(0).forEach((f) => f());
     def.onFinish?.(r.extra);
     const { seconds, ...extra } = r.extra;
     const rec = skip ? null : Store.record(def.id, score, def, extra);
@@ -332,8 +391,8 @@ ex({
           const n = size * size; let next = 1;
           const upd = () => status.replaceChildren(h('span', {}, 'Szukaj: ', h('b', {}, next)), h('span', { class: 'muted' }, `Tablice: ${api.extra.tables}`));
           const grid = h('div', { class: 'schulte', style: `--n:${size}` },
-            ...shuffle(Array.from({ length: n }, (_, i) => i + 1)).map((v) => h('button', {
-              class: 'cell', onpointerdown: (e) => {
+            ...shuffle(Array.from({ length: n }, (_, i) => i + 1)).map((v, idx) => h('button', {
+              class: 'cell' + (dot && size % 2 && idx === (n - 1) / 2 ? ' center-cell' : ''), onpointerdown: (e) => {
                 if (!api.alive) return;
                 if (v === next) {
                   if (mark) e.currentTarget.classList.add('found');
@@ -342,7 +401,7 @@ ex({
                 } else { api.extra.errors++; shake(e.currentTarget); }
               },
             }, v)),
-            dot ? h('div', { class: 'focus-dot' }) : null);
+            dot && size % 2 === 0 ? h('div', { class: 'focus-dot' }) : null);
           upd(); stage.replaceChildren(status, grid);
         };
         table();
@@ -372,15 +431,17 @@ ex({
       level: { key: `sfera-${items}`, max: MAX },
       async start(stage, api) {
         const status = h('div', { class: 'status' });
-        const field = h('div', { class: 'field' }, h('div', { class: 'cross' }, '+'));
+        const prompt = h('div', { class: 'prompt' }, '\u00a0');
+        const cross = h('div', { class: 'cross' }, '+');
+        const field = h('div', { class: 'field' }, cross);
         const answers = h('div', { class: 'answers' });
-        stage.replaceChildren(status, field, answers);
+        stage.replaceChildren(status, h('div', { class: 'field-wrap' }, prompt, field), answers);
         while (api.alive) {
           const radius = Math.min(0.92, 0.18 + api.level * 0.056);
           const exposure = Math.max(70, 200 - api.level * 10);
           status.replaceChildren(h('span', { class: 'muted' }, `promień ${Math.round(radius * 100)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
           answers.replaceChildren();
-          await sleep(450, api.signal);
+          await api.sleep(450);
           const center = String(rand(1, 9));
           const letters = shuffle([...LETTERS]).slice(0, items);
           const a0 = Math.random() * Math.PI * 2;
@@ -390,18 +451,22 @@ ex({
           });
           const c = h('div', { class: 'blip center' }, center);
           field.append(c, ...nodes);
-          await sleep(exposure, api.signal);
+          await api.sleep(exposure);
           [c, ...nodes].forEach((n) => { n.textContent = '#'; n.classList.add('mask'); });
-          await sleep(90, api.signal);
+          await api.sleep(90);
           [c, ...nodes].forEach((n) => n.remove());
 
           const askCenter = Math.random() < 0.25;
+          const label = askCenter ? 'Cyfra' : 'Litera';
+          prompt.textContent = label;
+          cross.textContent = label; cross.classList.add('ask');
           const correct = askCenter ? center : pick(letters);
           const pool = askCenter ? '123456789' : LETTERS;
           const opts = shuffle([correct, ...shuffle([...pool].filter((x) => !letters.includes(x) && x !== center)).slice(0, 5)]);
+          const backToCross = setTimeout(() => { cross.textContent = '+'; cross.classList.remove('ask'); }, 700);
           const chosen = await new Promise((res) => answers.replaceChildren(
-            h('p', { class: 'q' }, askCenter ? 'Cyfra' : 'Litera'),
             h('div', { class: 'grid3' }, ...opts.map((o) => h('button', { class: 'btn', onclick: () => res(o) }, o)))));
+          clearTimeout(backToCross); cross.textContent = '+'; cross.classList.remove('ask'); prompt.textContent = '\u00a0';
           if (!api.alive) return;
           const good = askCenter ? chosen === center : letters.includes(chosen);
           api.answer(good); flash(field, good);
@@ -435,21 +500,19 @@ ex({
           const exposure = Math.max(100, 380 - api.level * 25);
           status.replaceChildren(h('span', { class: 'muted' }, `odległość ${Math.round(dist)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
           answers.replaceChildren();
-          await sleep(400, api.signal);
+          await api.sleep(400);
           const pool = WORDS.filter((w) => [...w].length <= 4 + Math.ceil(api.level / 3));
           const a = pick(pool); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
           const L = h('div', { class: 'word-l', style: `right:${50 + dist}%` }, a);
           const R = h('div', { class: 'word-r', style: `left:${50 + dist}%` }, b);
           field.append(L, R);
-          await sleep(exposure, api.signal);
+          await api.sleep(exposure);
           L.remove(); R.remove();
-          const ans = await new Promise((res) => answers.replaceChildren(h('div', { class: 'row' },
-            h('button', { class: 'btn big', onclick: () => res(true) }, '= Takie same'),
-            h('button', { class: 'btn big', onclick: () => res(false) }, '≠ Różne'))));
+          const ans = await new Promise((res) => answers.replaceChildren(sameDiff(res)));
           if (!api.alive) return;
           const good = ans === same;
           api.answer(good); flash(field, good);
-          if (!good) { answers.replaceChildren(h('p', { class: 'muted center-text' }, `${a}  |  ${b}`)); await sleep(700, api.signal); }
+          if (!good) { answers.replaceChildren(h('p', { class: 'muted center-text' }, `${a}  |  ${b}`)); await api.sleep(700); }
         }
       },
     });
@@ -503,15 +566,17 @@ ex({
           const bar = h('div', { class: 'progress' }, h('div'));
           const speed = h('b', {}, cur);
           const next = h('small', {}, '');
-          const t0 = performance.now(); let ramps = 0;
+          let ramps = 0;
+          const manual = (v) => { setWpm(v); wpmVal = Math.max(100, cur - ramps * ramp); Store.setPref('rsvpWpm', wpmVal); };
           const setWpm = (v) => { cur = Math.min(1000, Math.max(100, v)); speed.textContent = cur; api.extra.wpm = cur; speed.classList.remove('bump'); void speed.offsetWidth; speed.classList.add('bump'); };
           stage.replaceChildren(display, bar, h('div', { class: 'row tempo' },
-            h('button', { class: 'btn', onclick: () => setWpm(cur - 25) }, '− 25'),
+            h('button', { class: 'btn', onclick: () => manual(cur - 25) }, '− 25'),
             h('span', { class: 'center-text' }, speed, h('small', {}, 'sł/min'), next),
-            h('button', { class: 'btn', onclick: () => setWpm(cur + 25) }, '+ 25')));
+            h('button', { class: 'btn', onclick: () => manual(cur + 25) }, '+ 25')));
           const step = () => {
             if (!api.alive) return;
-            const el = (performance.now() - t0) / 1000;
+            if (api.paused) { timer = setTimeout(step, 100); return; }
+            const el = api.elapsed();
             if (ramp && Math.floor(el / RAMP_EVERY) > ramps) { ramps = Math.floor(el / RAMP_EVERY); setWpm(cur + ramp); }
             next.textContent = ramp ? `+${ramp} za ${Math.ceil(RAMP_EVERY - (el % RAMP_EVERY))} s` : '';
             if (i >= parts.length) i = 0;
@@ -573,7 +638,7 @@ ex({
           }
         };
         const tick = () => {
-          if (!api.alive) return;
+          if (!api.alive || api.paused) return;
           const [x, y] = pos(); dot.style.left = x + '%'; dot.style.top = y + '%'; k++;
           if (k > 1) api.add();
         };
@@ -679,12 +744,12 @@ ex({
           const len = api.level + 2;
           status.replaceChildren(h('span', { class: 'muted' }, `${len} cyfr`));
           pad.replaceChildren();
-          show.textContent = '+'; await sleep(600, api.signal);
+          show.textContent = '+'; await api.sleep(600);
           let n = String(rand(1, 9));
           while (n.length < len) n += rand(0, 9);
           show.textContent = n.replace(/(\d{3})(?=\d)/g, '$1 ');
-          await sleep(Math.min(1200, 300 + len * 70), api.signal);
-          show.textContent = '#'.repeat(Math.min(len, 9)); await sleep(100, api.signal);
+          await api.sleep(Math.min(1200, 300 + len * 70));
+          show.textContent = '#'.repeat(Math.min(len, 9)); await api.sleep(100);
           show.textContent = '';
           const answer = await new Promise((res) => {
             let val = '';
@@ -700,7 +765,7 @@ ex({
           const good = answer === n;
           api.answer(good); flash(show, good);
           if (good) show.textContent = '✓'; else show.replaceChildren(h('span', { class: 'bad' }, n));
-          await sleep(good ? 350 : 900, api.signal);
+          await api.sleep(good ? 350 : 900);
         }
       },
     });
@@ -723,7 +788,7 @@ ex({
       level: { key: 'pary', max: MAX },
       async start(stage, api) {
         const status = h('div', { class: 'status' });
-        const card = h('div', { class: 'paircard' }); const btns = h('div', { class: 'row' });
+        const card = h('div', { class: 'paircard' }); const btns = h('div');
         stage.replaceChildren(status, card, btns);
         while (api.alive) {
           const exposure = Math.max(200, 1600 - (api.level - 1) * 125);
@@ -732,15 +797,13 @@ ex({
           const a = pick(pool); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
           card.replaceChildren(h('span', {}, a), h('span', {}, b));
           const hide = setTimeout(() => card.replaceChildren(h('span', { class: 'muted' }, '•••'), h('span', { class: 'muted' }, '•••')), exposure);
-          const ans = await new Promise((res) => btns.replaceChildren(
-            h('button', { class: 'btn big', onclick: () => res(true) }, '= Takie same'),
-            h('button', { class: 'btn big', onclick: () => res(false) }, '≠ Różne')));
+          const ans = await new Promise((res) => btns.replaceChildren(sameDiff(res)));
           clearTimeout(hide);
           if (!api.alive) return;
           const good = ans === same;
           api.answer(good); flash(card, good);
-          if (!good) { card.replaceChildren(h('span', {}, a), h('span', {}, b)); await sleep(700, api.signal); }
-          await sleep(150, api.signal);
+          if (!good) { card.replaceChildren(h('span', {}, a), h('span', {}, b)); await api.sleep(700); }
+          await api.sleep(150);
         }
       },
     });
@@ -777,13 +840,12 @@ ex({
         },
         async finalize(stage, extra, reason, sig) {
           const aborted = () => new DOMException('abort', 'AbortError');
-          let read = spans.length; let sec = extra.seconds;
-          if (reason === 'time') {
-            sec = DURATION;
+          let read = spans.length; const sec = extra.seconds;
+          if (reason !== 'end') {
             stage.querySelector('.sticky')?.remove();
             const art = stage.querySelector('.reading');
             art.classList.add('picking');
-            stage.prepend(h('div', { class: 'banner' }, 'Czas! Stuknij słowo, na którym skończyłeś'));
+            stage.prepend(h('div', { class: 'banner' }, `${reason === 'time' ? 'Czas!' : 'Koniec.'} Stuknij słowo, na którym skończyłeś`));
             read = await new Promise((res, rej) => {
               sig.addEventListener('abort', () => rej(aborted()), { once: true });
               art.addEventListener('click', (e) => { const i = e.target.dataset?.i; if (i != null) res(Number(i) + 1); });
@@ -873,7 +935,7 @@ function home() {
     h('header', { class: 'hero' },
       h('div', {}, h('h1', {}, 'ReaderProMM'), h('p', { class: 'muted' }, 'Trening szybkiego czytania')),
       h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni'))),
-    h('main', { class: 'screen-body' },
+    h('main', { class: 'screen-body home' },
       planSection(),
       h('h2', { class: 'group big' }, 'Wszystkie ćwiczenia'),
       ...groups.map((g) => h('section', {},
