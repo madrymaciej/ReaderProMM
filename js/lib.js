@@ -126,12 +126,17 @@ export function wpm(wordCount, seconds) {
   return seconds > 0 ? Math.round((wordCount / seconds) * 60) : 0;
 }
 
-/** Adaptacyjny poziom trudności: 2 trafienia z rzędu = poziom w górę, pudło = w dół. */
-export function adapt(state, correct, maxLevel) {
+/**
+ * Adaptacyjny poziom trudności — schodki „3 w górę / 1 w dół” (transformed up-down, Levitt 1971):
+ * 3 poprawne odpowiedzi z rzędu = poziom +1, każda błędna = poziom −1.
+ * Taka reguła utrzymuje skuteczność ok. 79% (0,5^(1/3)), blisko optimum uczenia ~85% (Wilson i in. 2019).
+ */
+export const UP_AFTER = 3;
+export function adapt(state, correct, maxLevel, upAfter = UP_AFTER) {
   const s = { ...state };
   if (correct) {
     s.streak += 1;
-    if (s.streak >= 2) { s.level = Math.min(maxLevel, s.level + 1); s.streak = 0; }
+    if (s.streak >= upAfter) { s.level = Math.min(maxLevel, s.level + 1); s.streak = 0; }
   } else {
     s.streak = 0;
     s.level = Math.max(1, s.level - 1);

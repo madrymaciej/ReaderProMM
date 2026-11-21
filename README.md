@@ -14,7 +14,7 @@ W trakcie sesji dostępne są przyciski **Stop** (powrót do ustawień, wynik ni
 | Pole widzenia | Tablica Schultego (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
 | Pole widzenia | **Widzenie sferyczne** | trafienia; adaptacyjny promień i czas ekspozycji (190→70 ms) |
 | Pole widzenia | Linia wzroku | trafienia (takie same / różne słowa po obu stronach osi) |
-| Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo 100–1000 sł/min, własny tekst |
+| Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst |
 | Tempo | Ruch oczu | skoki wzroku (5 wzorów) |
 | Uwaga i pamięć | Szukanie liter | znalezione litery |
 | Uwaga i pamięć | Szukanie liczb | znalezione liczby |
@@ -25,6 +25,11 @@ W trakcie sesji dostępne są przyciski **Stop** (powrót do ustawień, wynik ni
 **Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Dalej w planie →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
+
+**Poziomy** (widzenie sferyczne, linia wzroku, szukanie liter i liczb, zapamiętaj liczbę, pary słów):
+3 poprawne odpowiedzi z rzędu = poziom +1, każdy błąd = poziom −1 (reguła schodkowa Levitta „3-down/1-up”,
+skuteczność ok. 79%). Poziom jest zapamiętywany i kolejna sesja startuje od niego. Aktualny poziom widać na górze ekranu.
+Biegające słowa przyspieszają automatycznie co 10 s (+10/+25/+50 sł/min do wyboru).
 
 Do testów czas sesji można skrócić parametrem `?t=5` (sekundy).
 

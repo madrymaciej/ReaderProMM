@@ -1,6 +1,6 @@
 import {
   rand, pick, shuffle, WORDS, mutate, letterGrid, numberRound, orpIndex,
-  tokenize, chunk, delayFor, wpm, adapt, dayKey, streak,
+  tokenize, chunk, delayFor, wpm, adapt, dayKey, streak, UP_AFTER,
 } from './lib.js';
 import { TEXTS } from './texts.js';
 
@@ -70,6 +70,16 @@ const Store = {
       (id === prefix || id.startsWith(prefix + '-')) && r.history.some((e) => dayKey(new Date(e.t)) === today));
   },
 };
+
+/* ---------- Poziomy (zapamiętywane między sesjami) ---------- */
+const getLevel = (key) => Store.pref(`lvl-${key}`, 1);
+const setLevel = (key, v) => Store.setPref(`lvl-${key}`, v);
+function levelInfo(key, max, rerender) {
+  const lv = getLevel(key);
+  return h('div', { class: 'lvl-info' },
+    h('span', {}, 'Start od poziomu ', h('b', {}, lv), h('span', { class: 'muted' }, ` / ${max}`)),
+    lv > 1 ? h('button', { class: 'link', onclick: () => { setLevel(key, 1); rerender(); } }, 'Od poziomu 1') : null);
+}
 
 /* ---------- Plan dnia ---------- */
 const DEFAULT_PLAN = ['oczy', 'schulte', 'sfera', 'linia', 'rsvp'];
@@ -188,18 +198,42 @@ function session(body, parentSignal, def) {
     const scoreEl = h('b', { class: 'score mono' }, '0');
     const fill = h('div');
     const stage = h('div', { class: 'stage' });
+    // Poziom (dla ćwiczeń z oceną poprawne/błędne): startuje od ostatnio osiągniętego.
+    let st = def.level ? { level: getLevel(def.level.key), streak: 0, maxLevel: 0 } : null;
+    const lvlEl = h('span', { class: 'lvl' }, st ? `Poziom ${st.level}` : '');
+    const dots = h('span', { class: 'dots' });
+    const drawDots = () => dots.replaceChildren(...Array.from({ length: UP_AFTER }, (_, i) => h('i', { class: i < st.streak ? 'on' : '' })));
+    if (st) { st.maxLevel = st.level; Object.assign(r.extra, { levelStart: st.level, level: st.level, maxLevel: st.level, hits: 0, trials: 0 }); drawDots(); }
     const controls = h('div', { class: 'controls' },
       h('div', { class: 'ctl-row' },
         h('button', { class: 'btn ctl', onclick: () => { kill(); body.classList.remove('in-session'); def.onSetup(); } }, '■ Stop'),
         h('div', { class: 'ctl-info' }, timeEl, h('span', { class: 'muted' }, `${def.unit}: `, scoreEl)),
         h('button', { class: 'btn ctl', onclick: begin }, '↻ Od nowa')),
+      st ? h('div', { class: 'lvl-row' }, lvlEl, dots, h('span', { class: 'muted small' }, `${UP_AFTER}× dobrze = ▲ · błąd = ▼`)) : null,
       h('div', { class: 'timebar' }, fill));
     body.classList.add('in-session');
     body.replaceChildren(controls, stage);
     const api = {
       signal: ctl.signal,
       get alive() { return !r.ended && !ctl.signal.aborted; },
+      get level() { return st?.level ?? 1; },
       add(n = 1) { if (!api.alive) return; r.score += n; scoreEl.textContent = r.score; },
+      /** Zgłoś wynik próby: liczy trafienia, zmienia poziom i zapamiętuje go. */
+      answer(good) {
+        if (!api.alive || !st) return 0;
+        const before = st.level;
+        st = adapt(st, good, def.level.max);
+        r.extra.trials++;
+        if (good) { r.extra.hits++; api.add(); }
+        Object.assign(r.extra, { level: st.level, maxLevel: Math.max(r.extra.maxLevel, st.level) });
+        setLevel(def.level.key, st.level);
+        const diff = st.level - before;
+        lvlEl.textContent = `Poziom ${st.level}`;
+        if (diff) { lvlEl.classList.remove('up', 'down'); void lvlEl.offsetWidth; lvlEl.classList.add(diff > 0 ? 'up' : 'down'); }
+        drawDots();
+        vibrate(good ? 5 : [30, 40, 30]);
+        return diff;
+      },
       extra: r.extra,
       end: () => finish(r, stage, 'end'),
     };
@@ -219,7 +253,12 @@ function session(body, parentSignal, def) {
     if (r.ended) return;
     r.ended = true; clearInterval(r.iv);
     r.extra.seconds = Math.min(DURATION, (performance.now() - r.t0) / 1000);
-    let score = r.score; let lines = def.lines ? def.lines(r.extra) : []; let skip = false;
+    let score = r.score; let skip = false;
+    const x = r.extra;
+    let lines = [
+      ...(def.level ? [`Poziom: ${x.levelStart} → ${x.level} (najwyższy: ${x.maxLevel})`,
+        `Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`] : []),
+      ...(def.lines ? def.lines(x) : [])];
     if (def.finalize) {
       try { ({ score, lines = [], skip = false } = await def.finalize(stage, r.extra, reason, r.ctl.signal)); } catch { return; }
     }
@@ -317,8 +356,8 @@ ex({
 ex({
   id: 'sfera', group: 'Pole widzenia', icon: '◎', name: 'Widzenie sferyczne',
   short: 'Rozpoznaj znak błyskający na obwodzie',
-  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. Promień rośnie, a czas wyświetlania maleje, gdy trafiasz.',
-  score: 'Liczba trafień w 1 minutę. Dodatkowo: najwyższy osiągnięty poziom i skuteczność.',
+  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. 3 trafienia z rzędu = poziom w górę (większy promień, krótszy czas), błąd = poziom w dół.',
+  score: 'Liczba trafień w 1 minutę. Poziom zapamiętuje się — kolejna sesja startuje od miejsca, w którym skończyłeś.',
   why: 'Ćwiczy widzenie peryferyjne we wszystkich kierunkach naraz (stąd „sferyczne”). Bardzo krótki czas ekspozycji (poniżej ok. 200 ms — tyle trwa zaplanowanie i wykonanie ruchu oka) wyklucza przesunięcie wzroku — rozpoznajesz znak wyłącznie peryferyjnie.',
   run(body, signal) {
     const MAX = 14; const LETTERS = 'ABCDEFHKLMNPRSTUWZ';
@@ -326,23 +365,20 @@ ex({
     const setup = () => body.replaceChildren(
       h('p', { class: 'label' }, 'Liczba liter na obwodzie'),
       chips([[1, '1 litera'], [2, '2 litery'], [3, '3 litery']], items, (v) => { items = v; Store.setPref('sferaItems', v); setup(); }),
-      h('p', { class: 'muted small' }, `Poziom startowy: ${Store.pref(`sferaStart${items}`, 1)} (dopasowuje się automatycznie).`),
+      levelInfo(`sfera-${items}`, MAX, setup),
       startBtn(go), lastResult(`sfera-${items}`));
     const go = () => session(body, signal, {
       id: `sfera-${items}`, name: `Widzenie sferyczne · ${items} ${items === 1 ? 'litera' : 'litery'}`, unit: 'trafień', onSetup: setup,
-      lines: (x) => [`Najwyższy poziom: ${x.maxLevel}`, `Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`],
-      onFinish: (x) => Store.setPref(`sferaStart${items}`, Math.max(1, (x.maxLevel || 1) - 3)),
+      level: { key: `sfera-${items}`, max: MAX },
       async start(stage, api) {
-        let st = { level: Store.pref(`sferaStart${items}`, 1), streak: 0, maxLevel: 1 };
-        Object.assign(api.extra, { trials: 0, hits: 0, maxLevel: st.level });
         const status = h('div', { class: 'status' });
         const field = h('div', { class: 'field' }, h('div', { class: 'cross' }, '+'));
         const answers = h('div', { class: 'answers' });
         stage.replaceChildren(status, field, answers);
         while (api.alive) {
-          const radius = Math.min(0.92, 0.18 + st.level * 0.056);
-          const exposure = Math.max(70, 200 - st.level * 10);
-          status.replaceChildren(h('span', {}, `Poziom ${st.level}`), h('span', { class: 'muted' }, `${exposure} ms`));
+          const radius = Math.min(0.92, 0.18 + api.level * 0.056);
+          const exposure = Math.max(70, 200 - api.level * 10);
+          status.replaceChildren(h('span', { class: 'muted' }, `promień ${Math.round(radius * 100)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
           answers.replaceChildren();
           await sleep(450, api.signal);
           const center = String(rand(1, 9));
@@ -368,11 +404,7 @@ ex({
             h('div', { class: 'grid3' }, ...opts.map((o) => h('button', { class: 'btn', onclick: () => res(o) }, o)))));
           if (!api.alive) return;
           const good = askCenter ? chosen === center : letters.includes(chosen);
-          api.extra.trials++;
-          if (good) { api.extra.hits++; api.add(); }
-          vibrate(good ? 5 : [30, 40, 30]); flash(field, good);
-          st = adapt(st, good, MAX);
-          api.extra.maxLevel = Math.max(api.extra.maxLevel, st.level);
+          api.answer(good); flash(field, good);
         }
       },
     });
@@ -384,31 +416,27 @@ ex({
 ex({
   id: 'linia', group: 'Pole widzenia', icon: '⇹', name: 'Linia wzroku',
   short: 'Porównaj słowa po obu stronach osi',
-  how: 'Patrz na czerwoną pionową linię. Po obu stronach błysną dwa słowa. Oceń, czy są identyczne. Z każdym poziomem słowa pojawiają się dalej od środka i krócej.',
-  score: 'Liczba trafnych odpowiedzi w 1 minutę. Dodatkowo: najwyższy poziom.',
+  how: 'Patrz na czerwoną pionową linię. Po obu stronach błysną dwa słowa. Oceń, czy są identyczne. 3 trafienia z rzędu = poziom w górę (słowa dalej od środka, dłuższe i krócej widoczne), błąd = poziom w dół.',
+  score: 'Liczba trafnych odpowiedzi w 1 minutę. Poziom zapamiętuje się między sesjami.',
   why: 'Poszerza poziome pole widzenia — dokładnie ten kierunek, który wykorzystujesz w linijce tekstu. Jeśli widzisz peryferyjnie początek i koniec krótkiej linii, możesz ją objąć jedną–dwiema fiksacjami.',
   run(body, signal) {
     const MAX = 12;
-    const setup = () => body.replaceChildren(
-      h('p', { class: 'muted center-text' }, 'Trudność dopasowuje się automatycznie.'), startBtn(go), lastResult('linia'));
+    const setup = () => body.replaceChildren(levelInfo('linia', MAX, setup), startBtn(go), lastResult('linia'));
     const go = () => session(body, signal, {
       id: 'linia', name: 'Linia wzroku', unit: 'trafień', onSetup: setup,
-      lines: (x) => [`Najwyższy poziom: ${x.maxLevel}`, `Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`],
-      onFinish: (x) => Store.setPref('liniaStart', Math.max(1, (x.maxLevel || 1) - 3)),
+      level: { key: 'linia', max: MAX },
       async start(stage, api) {
-        let st = { level: Store.pref('liniaStart', 1), streak: 0, maxLevel: 1 };
-        Object.assign(api.extra, { trials: 0, hits: 0, maxLevel: st.level });
         const status = h('div', { class: 'status' });
         const field = h('div', { class: 'field wide' }, h('div', { class: 'axis' }));
         const answers = h('div', { class: 'answers' });
         stage.replaceChildren(status, field, answers);
         while (api.alive) {
-          const dist = Math.min(44, 9 + st.level * 3.2);
-          const exposure = Math.max(100, 380 - st.level * 25);
-          status.replaceChildren(h('span', {}, `Poziom ${st.level}`), h('span', { class: 'muted' }, `${exposure} ms`));
+          const dist = Math.min(44, 9 + api.level * 3.2);
+          const exposure = Math.max(100, 380 - api.level * 25);
+          status.replaceChildren(h('span', { class: 'muted' }, `odległość ${Math.round(dist)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
           answers.replaceChildren();
           await sleep(400, api.signal);
-          const pool = WORDS.filter((w) => [...w].length <= 4 + Math.ceil(st.level / 3));
+          const pool = WORDS.filter((w) => [...w].length <= 4 + Math.ceil(api.level / 3));
           const a = pick(pool); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
           const L = h('div', { class: 'word-l', style: `right:${50 + dist}%` }, a);
           const R = h('div', { class: 'word-r', style: `left:${50 + dist}%` }, b);
@@ -420,12 +448,8 @@ ex({
             h('button', { class: 'btn big', onclick: () => res(false) }, '≠ Różne'))));
           if (!api.alive) return;
           const good = ans === same;
-          api.extra.trials++;
-          if (good) { api.extra.hits++; api.add(); }
-          vibrate(good ? 5 : [30, 40, 30]); flash(field, good);
+          api.answer(good); flash(field, good);
           if (!good) { answers.replaceChildren(h('p', { class: 'muted center-text' }, `${a}  |  ${b}`)); await sleep(700, api.signal); }
-          st = adapt(st, good, MAX);
-          api.extra.maxLevel = Math.max(api.extra.maxLevel, st.level);
         }
       },
     });
@@ -436,14 +460,16 @@ ex({
 /* ---------- 4. Biegające słowa (RSVP) ---------- */
 ex({
   id: 'rsvp', group: 'Tempo', icon: '▶', name: 'Biegające słowa',
-  short: 'Czytaj słowo po słowie w zadanym tempie',
-  how: 'Patrz na czerwoną literę — słowa zmieniają się w tym samym miejscu. Zacznij od tempa, przy którym rozumiesz tekst, i co sesję podnoś je o 25–50 słów/min (przyciski − / + działają w trakcie). Możesz wkleić własny tekst, np. artykuł.',
-  score: 'Liczba słów przeczytanych w 1 minutę, czyli Twoje realne tempo (z krótkimi pauzami na interpunkcji).',
-  why: 'Słowa podawane w jednym punkcie eliminują sakkady i regresje (powroty wzroku), a stałe tempo uczy, że nie trzeba „cofać się” po każde słowo. To trening tempa i skupienia — sprawdzaj zrozumienie testem czytania, bo przy zbyt wysokim tempie ono spada.',
+  short: 'Czytaj słowo po słowie, tempo rośnie w trakcie',
+  how: 'Patrz na czerwoną literę — słowa zmieniają się w tym samym miejscu. Ustaw tempo startowe, przy którym rozumiesz tekst. W trakcie sesji tempo rośnie automatycznie co 10 s (możesz też poprawić je ręcznie przyciskami − / +). Możesz wkleić własny tekst, np. artykuł.',
+  score: 'Liczba słów przeczytanych w 1 minutę. Dodatkowo: tempo końcowe, do którego doszedłeś.',
+  why: 'Słowa podawane w jednym punkcie eliminują sakkady i regresje (powroty wzroku), a stopniowe przyspieszanie przesuwa granicę komfortowego tempa. Sprawdzaj zrozumienie testem czytania, bo przy zbyt wysokim tempie ono spada.',
   run(body, signal) {
     let wpmVal = Store.pref('rsvpWpm', 300);
     let size = Store.pref('rsvpChunk', 1);
     let textId = Store.pref('rsvpText', TEXTS[0].id);
+    let ramp = Store.pref('rsvpRamp', 25);
+    const RAMP_EVERY = 10;
     const area = h('textarea', { class: 'custom', placeholder: 'Wklej tutaj własny tekst…', rows: 5 });
     area.value = Store.pref('rsvpCustom', '');
     area.addEventListener('input', () => Store.setPref('rsvpCustom', area.value));
@@ -455,8 +481,10 @@ ex({
         h('p', { class: 'label' }, 'Tekst'),
         chips([...TEXTS.map((t) => [t.id, t.title]), ['custom', 'Własny tekst']], textId, (v) => { textId = v; area.hidden = v !== 'custom'; Store.setPref('rsvpText', v); }),
         area,
-        h('p', { class: 'label' }, 'Tempo: ', wpmLabel, ' słów/min'),
+        h('p', { class: 'label' }, 'Tempo startowe: ', wpmLabel, ' słów/min'),
         h('input', { type: 'range', min: 100, max: 1000, step: 25, value: wpmVal, oninput: (e) => { wpmVal = +e.target.value; wpmLabel.textContent = wpmVal; Store.setPref('rsvpWpm', wpmVal); } }),
+        h('p', { class: 'label' }, `Przyspieszanie co ${RAMP_EVERY} s`),
+        chips([[0, 'Wył.'], [10, '+10'], [25, '+25'], [50, '+50']], ramp, (v) => { ramp = v; Store.setPref('rsvpRamp', v); }),
         h('p', { class: 'label' }, 'Słów naraz'),
         chips([[1, '1'], [2, '2'], [3, '3']], size, (v) => { size = v; Store.setPref('rsvpChunk', v); }),
         startBtn(go), lastResult('rsvp'));
@@ -466,20 +494,26 @@ ex({
       if (words.length < 5) { alert('Tekst jest za krótki.'); return; }
       session(body, signal, {
         id: 'rsvp', name: 'Biegające słowa', unit: 'słów', onSetup: setup,
-        lines: (x) => [`Ustawione tempo: ${x.wpm} sł/min${x.wpmStart !== x.wpm ? ` (start: ${x.wpmStart})` : ''}`],
+        lines: (x) => [`Tempo: ${x.wpmStart} → ${x.wpm} sł/min`],
         start(stage, api) {
-          Object.assign(api.extra, { wpm: wpmVal, wpmStart: wpmVal });
+          let cur = wpmVal;
+          Object.assign(api.extra, { wpm: cur, wpmStart: cur });
           const parts = chunk(words, size); let i = 0; let timer = null;
           const display = h('div', { class: 'rsvp' });
           const bar = h('div', { class: 'progress' }, h('div'));
-          const speed = h('b', {}, wpmVal);
-          const setWpm = (d) => { wpmVal = Math.min(1000, Math.max(100, wpmVal + d)); Store.setPref('rsvpWpm', wpmVal); speed.textContent = wpmVal; api.extra.wpm = wpmVal; };
+          const speed = h('b', {}, cur);
+          const next = h('small', {}, '');
+          const t0 = performance.now(); let ramps = 0;
+          const setWpm = (v) => { cur = Math.min(1000, Math.max(100, v)); speed.textContent = cur; api.extra.wpm = cur; speed.classList.remove('bump'); void speed.offsetWidth; speed.classList.add('bump'); };
           stage.replaceChildren(display, bar, h('div', { class: 'row tempo' },
-            h('button', { class: 'btn', onclick: () => setWpm(-25) }, '− 25'),
-            h('span', { class: 'center-text' }, speed, h('small', {}, 'sł/min')),
-            h('button', { class: 'btn', onclick: () => setWpm(25) }, '+ 25')));
+            h('button', { class: 'btn', onclick: () => setWpm(cur - 25) }, '− 25'),
+            h('span', { class: 'center-text' }, speed, h('small', {}, 'sł/min'), next),
+            h('button', { class: 'btn', onclick: () => setWpm(cur + 25) }, '+ 25')));
           const step = () => {
             if (!api.alive) return;
+            const el = (performance.now() - t0) / 1000;
+            if (ramp && Math.floor(el / RAMP_EVERY) > ramps) { ramps = Math.floor(el / RAMP_EVERY); setWpm(cur + ramp); }
+            next.textContent = ramp ? `+${ramp} za ${Math.ceil(RAMP_EVERY - (el % RAMP_EVERY))} s` : '';
             if (i >= parts.length) i = 0;
             const frag = parts[i++];
             if (size === 1) {
@@ -491,7 +525,7 @@ ex({
             } else display.replaceChildren(h('div', { class: 'phrase' }, frag));
             bar.firstChild.style.width = `${(i / parts.length) * 100}%`;
             api.add(frag.split(' ').length);
-            timer = setTimeout(step, delayFor(frag, wpmVal));
+            timer = setTimeout(step, delayFor(frag, cur));
           };
           api.signal.addEventListener('abort', () => clearTimeout(timer));
           step();
@@ -556,28 +590,31 @@ ex({
 ex({
   id: 'litery', group: 'Uwaga i pamięć', icon: 'Aa', name: 'Szukanie liter',
   short: 'Znajdź wszystkie wskazane litery wśród podobnych',
-  how: 'Znajdź i stuknij wszystkie wystąpienia litery docelowej. Litery wokół są do niej celowo podobne (b/d/p/q). Po znalezieniu wszystkich pojawia się nowa plansza. Przeszukuj rzędami, jak przy czytaniu.',
-  score: 'Liczba znalezionych liter w 1 minutę. Pomyłki są pokazane osobno.',
+  how: 'Znajdź i stuknij wszystkie wystąpienia litery docelowej. Litery wokół są do niej celowo podobne (b/d/p/q). Po znalezieniu wszystkich pojawia się nowa plansza. 3 trafienia z rzędu = poziom w górę (większa plansza), pomyłka = poziom w dół. Zmiana rozmiaru następuje od kolejnej planszy.',
+  score: 'Liczba znalezionych liter w 1 minutę. Poziom zapamiętuje się między sesjami.',
   why: 'Uczy szybkiego rozróżniania kształtów liter i utrzymania koncentracji podczas skanowania. To ta sama praca wzrokowa, którą wykonujesz przy rozpoznawaniu słów — tylko wyizolowana.',
   run(body, signal) {
-    const setup = () => body.replaceChildren(startBtn(go), lastResult('litery'));
+    const MAX = 8;
+    const setup = () => body.replaceChildren(levelInfo('litery', MAX, setup), startBtn(go), lastResult('litery'));
     const go = () => session(body, signal, {
       id: 'litery', name: 'Szukanie liter', unit: 'liter', onSetup: setup,
-      lines: (x) => [`Ukończone plansze: ${x.boards}`, `Pomyłki: ${x.errors}`],
+      level: { key: 'litery', max: MAX },
+      lines: (x) => [`Ukończone plansze: ${x.boards}`],
       start(stage, api) {
-        Object.assign(api.extra, { boards: 0, errors: 0 });
+        api.extra.boards = 0;
         const board = () => {
-          const { target, cells } = letterGrid(64, rand(6, 9));
+          const rows = 3 + api.level; const n = rows * 8;
+          const { target, cells } = letterGrid(n, Math.max(4, Math.round(n / 9)));
           const total = cells.filter((c) => c === target).length; let found = 0;
           const status = h('div', { class: 'status' });
-          const upd = () => status.replaceChildren(h('span', {}, 'Szukaj: ', h('b', { class: 'target' }, target)), h('span', { class: 'muted' }, `${found}/${total}`));
+          const upd = () => status.replaceChildren(h('span', {}, 'Szukaj: ', h('b', { class: 'target' }, target)), h('span', { class: 'muted' }, `${found}/${total} · 8×${rows}`));
           const grid = h('div', { class: 'letters' }, ...cells.map((c) => h('button', {
             class: 'cell small', onpointerdown: (e) => {
               const el = e.currentTarget; if (!api.alive || el.classList.contains('found')) return;
               if (c === target) {
-                el.classList.add('found'); found++; api.add(); vibrate(5); upd();
+                el.classList.add('found'); found++; api.answer(true); upd();
                 if (found === total) { api.extra.boards++; setTimeout(() => api.alive && board(), 200); }
-              } else { api.extra.errors++; shake(el); }
+              } else { api.answer(false); shake(el); }
             },
           }, c)));
           upd(); stage.replaceChildren(status, grid);
@@ -593,26 +630,25 @@ ex({
 ex({
   id: 'liczby', group: 'Uwaga i pamięć', icon: '#', name: 'Szukanie liczb',
   short: 'Znajdź liczbę wśród bardzo podobnych',
-  how: 'Na górze widzisz liczbę. Znajdź ją w siatce wśród liczb różniących się jedną cyfrą lub kolejnością. Co 4 znalezione liczby stają się o cyfrę dłuższe.',
-  score: 'Liczba znalezionych liczb w 1 minutę.',
+  how: 'Na górze widzisz liczbę. Znajdź ją w siatce wśród liczb różniących się jedną cyfrą lub kolejnością. 3 trafienia z rzędu = poziom w górę (liczby dłuższe o cyfrę), pomyłka = poziom w dół.',
+  score: 'Liczba znalezionych liczb w 1 minutę. Poziom zapamiętuje się między sesjami.',
   why: 'Trenuje precyzyjne postrzeganie całych ciągów znaków jednym spojrzeniem, zamiast znak po znaku. Przydatne wprost przy czytaniu tabel, faktur i raportów.',
   run(body, signal) {
-    const setup = () => body.replaceChildren(startBtn(go), lastResult('liczby'));
+    const MAX = 6;
+    const setup = () => body.replaceChildren(levelInfo('liczby', MAX, setup), startBtn(go), lastResult('liczby'));
     const go = () => session(body, signal, {
       id: 'liczby', name: 'Szukanie liczb', unit: 'liczb', onSetup: setup,
-      lines: (x) => [`Najdłuższa liczba: ${x.digits} cyfr`, `Pomyłki: ${x.errors}`],
+      level: { key: 'liczby', max: MAX },
       start(stage, api) {
-        Object.assign(api.extra, { errors: 0, digits: 4 });
-        let found = 0;
         const round = () => {
-          const digits = Math.min(7, 4 + Math.floor(found / 4)); api.extra.digits = digits;
+          const digits = 3 + api.level;
           const { target, cells } = numberRound(digits, 20);
           stage.replaceChildren(
             h('div', { class: 'status' }, h('span', {}, 'Znajdź: ', h('b', { class: 'target mono' }, target)), h('span', { class: 'muted' }, `${digits} cyfr`)),
-            h('div', { class: 'numbers' }, ...cells.map((c) => h('button', {
+            h('div', { class: 'numbers' + (digits > 6 ? ' n3' : '') }, ...cells.map((c) => h('button', {
               class: 'cell mono', onpointerdown: (e) => {
                 if (!api.alive) return;
-                if (c === target) { found++; api.add(); vibrate(5); round(); } else { api.extra.errors++; shake(e.currentTarget); }
+                if (c === target) { api.answer(true); round(); } else { api.answer(false); shake(e.currentTarget); }
               },
             }, c))));
         };
@@ -627,22 +663,21 @@ ex({
 ex({
   id: 'pamiec', group: 'Uwaga i pamięć', icon: '7̲', name: 'Zapamiętaj liczbę',
   short: 'Liczba błyska na chwilę — wpisz ją',
-  how: 'Liczba pojawi się na ułamek sekundy. Wpisz ją z pamięci. Poprawna odpowiedź wydłuża kolejną liczbę o jedną cyfrę, błędna — skraca.',
-  score: 'Liczba poprawnie zapamiętanych liczb w 1 minutę. Dodatkowo: najdłuższa zapamiętana liczba.',
+  how: 'Liczba pojawi się na ułamek sekundy. Wpisz ją z pamięci. Poziom = długość liczby (poziom 1 = 3 cyfry). 3 poprawne z rzędu = poziom w górę, błąd = poziom w dół.',
+  score: 'Liczba poprawnie zapamiętanych liczb w 1 minutę. Poziom zapamiętuje się między sesjami.',
   why: 'Ćwiczy „chwytanie” całej grupy znaków w jednej fiksacji i utrzymanie jej w pamięci roboczej. Przy czytaniu pozwala to obejmować wzrokiem kilka słów naraz zamiast jednego.',
   run(body, signal) {
-    const setup = () => body.replaceChildren(startBtn(go), lastResult('pamiec'));
+    const MAX = 10;
+    const setup = () => body.replaceChildren(levelInfo('pamiec', MAX, setup), startBtn(go), lastResult('pamiec'));
     const go = () => session(body, signal, {
       id: 'pamiec', name: 'Zapamiętaj liczbę', unit: 'liczb', onSetup: setup,
-      lines: (x) => [`Najdłuższa zapamiętana: ${x.maxLen || 0} cyfr`, `Próby: ${x.trials}`],
-      onFinish: (x) => Store.setPref('pamiecStart', Math.max(3, (x.maxLen || 3) - 1)),
+      level: { key: 'pamiec', max: MAX },
       async start(stage, api) {
-        let len = Store.pref('pamiecStart', 3);
-        Object.assign(api.extra, { maxLen: 0, trials: 0 });
         const status = h('div', { class: 'status' }); const show = h('div', { class: 'flash' }); const pad = h('div');
         stage.replaceChildren(status, show, pad);
         while (api.alive) {
-          status.replaceChildren(h('span', {}, `Cyfr: ${len}`));
+          const len = api.level + 2;
+          status.replaceChildren(h('span', { class: 'muted' }, `${len} cyfr`));
           pad.replaceChildren();
           show.textContent = '+'; await sleep(600, api.signal);
           let n = String(rand(1, 9));
@@ -662,10 +697,9 @@ ex({
               ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => h('button', { class: 'btn' + (k === 'OK' ? ' primary' : ''), onclick: () => press(k) }, k))));
           });
           if (!api.alive) return;
-          api.extra.trials++;
           const good = answer === n;
-          if (good) { api.add(); api.extra.maxLen = Math.max(api.extra.maxLen, len); len++; show.textContent = '✓'; } else { len = Math.max(3, len - 1); show.replaceChildren(h('span', { class: 'bad' }, n)); }
-          vibrate(good ? 5 : [30, 40, 30]); flash(show, good);
+          api.answer(good); flash(show, good);
+          if (good) show.textContent = '✓'; else show.replaceChildren(h('span', { class: 'bad' }, n));
           await sleep(good ? 350 : 900, api.signal);
         }
       },
@@ -678,30 +712,35 @@ ex({
 ex({
   id: 'pary', group: 'Uwaga i pamięć', icon: '≠', name: 'Pary słów',
   short: 'Oceń jak najszybciej: takie same czy różne?',
-  how: 'Pojawia się para słów. Oceń jak najszybciej, czy są identyczne. Różnice są drobne: jedna litera albo zamiana kolejności.',
-  score: 'Liczba trafnych odpowiedzi w 1 minutę.',
+  how: 'Pojawia się para słów — po chwili znika. Oceń, czy słowa były identyczne. Różnice są drobne: jedna litera albo zamiana kolejności. 3 trafienia z rzędu = poziom w górę (dłuższe słowa, krótszy czas), błąd = poziom w dół.',
+  score: 'Liczba trafnych odpowiedzi w 1 minutę. Poziom zapamiętuje się między sesjami.',
   why: 'Uczy dokładnego postrzegania całego słowa na raz przy wysokim tempie. Mózg zwykle „domyśla się” słowa po kształcie — tu musisz zauważyć drobną różnicę, co wzmacnia precyzję rozpoznawania.',
   run(body, signal) {
-    const setup = () => body.replaceChildren(startBtn(go), lastResult('pary'));
+    const MAX = 12;
+    const setup = () => body.replaceChildren(levelInfo('pary', MAX, setup), startBtn(go), lastResult('pary'));
     const go = () => session(body, signal, {
       id: 'pary', name: 'Pary słów', unit: 'trafień', onSetup: setup,
-      lines: (x) => [`Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`],
+      level: { key: 'pary', max: MAX },
       async start(stage, api) {
-        Object.assign(api.extra, { trials: 0, hits: 0 });
+        const status = h('div', { class: 'status' });
         const card = h('div', { class: 'paircard' }); const btns = h('div', { class: 'row' });
-        stage.replaceChildren(card, btns);
+        stage.replaceChildren(status, card, btns);
         while (api.alive) {
-          const a = pick(WORDS); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
+          const exposure = Math.max(200, 1600 - (api.level - 1) * 125);
+          status.replaceChildren(h('span', { class: 'muted' }, `widoczne ${exposure} ms`));
+          const pool = WORDS.filter((w) => [...w].length >= Math.min(6, 2 + Math.ceil(api.level / 2)));
+          const a = pick(pool); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
           card.replaceChildren(h('span', {}, a), h('span', {}, b));
+          const hide = setTimeout(() => card.replaceChildren(h('span', { class: 'muted' }, '•••'), h('span', { class: 'muted' }, '•••')), exposure);
           const ans = await new Promise((res) => btns.replaceChildren(
             h('button', { class: 'btn big', onclick: () => res(true) }, '= Takie same'),
             h('button', { class: 'btn big', onclick: () => res(false) }, '≠ Różne')));
+          clearTimeout(hide);
           if (!api.alive) return;
           const good = ans === same;
-          api.extra.trials++;
-          if (good) { api.extra.hits++; api.add(); }
-          vibrate(good ? 5 : [30, 40, 30]); flash(card, good);
-          if (!good) await sleep(500, api.signal);
+          api.answer(good); flash(card, good);
+          if (!good) { card.replaceChildren(h('span', {}, a), h('span', {}, b)); await sleep(700, api.signal); }
+          await sleep(150, api.signal);
         }
       },
     });

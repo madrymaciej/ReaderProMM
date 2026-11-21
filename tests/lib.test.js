@@ -33,12 +33,18 @@ test('delayFor: 300 WPM = 200 ms, dłużej na kropce', () => {
   assert.equal(delayFor('dom', 300), 200);
   assert.ok(delayFor('dom.', 300) > 200);
 });
-test('adapt podnosi poziom po 2 trafieniach i obniża po błędzie', () => {
+test('adapt: 3 trafienia z rzędu = +1, błąd = −1, granice 1..max', () => {
   let s = { level: 1, streak: 0, maxLevel: 1 };
   s = adapt(s, true, 10); s = adapt(s, true, 10);
+  assert.equal(s.level, 1);
+  s = adapt(s, true, 10);
   assert.equal(s.level, 2);
+  s = adapt(s, true, 10); s = adapt(s, false, 10);
+  assert.equal(s.level, 1); assert.equal(s.streak, 0); assert.equal(s.maxLevel, 2);
   s = adapt(s, false, 10);
-  assert.equal(s.level, 1); assert.equal(s.maxLevel, 2);
+  assert.equal(s.level, 1);
+  s = { level: 10, streak: 2, maxLevel: 10 };
+  assert.equal(adapt(s, true, 10).level, 10);
 });
 test('streak liczy kolejne dni', () => {
   const t = new Date(2026, 10, 21);
