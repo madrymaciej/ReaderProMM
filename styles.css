@@ -453,3 +453,17 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
   .rctl { flex: 1; }
   .rpage { max-width: 760px; margin: 0 auto; }
 }
+
+/* ---------- Macierz liter ---------- */
+.field.sq { border-radius: var(--radius); container-type: inline-size; display: grid; place-items: center; }
+.matrix { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); width: 88%; height: 88%; place-items: center; }
+.matrix span { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 700; line-height: 1;
+  font-size: calc(88cqi / var(--n, 3) * .46); }
+.matrix span.mask { color: var(--muted); }
+.mfix { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--pivot); pointer-events: none; }
+.field.sq.showing .mfix { opacity: 0; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .field.sq { width: auto; height: calc(var(--fh) - 16px); }
+  .in-session .stage:has(> .field.sq) > .samediff { flex-basis: auto; width: 260px; }
+  .in-session .stage:has(> .field.sq) > .samediff .btn { min-height: 120px; flex-direction: column; }
+}

@@ -515,6 +515,81 @@ ex({
   },
 });
 
+/* ---------- 2b. Macierz liter (widzenie sferyczne, wzorowane na ReaderPro) ---------- */
+ex({
+  id: 'macierz', group: 'Pole widzenia', icon: '⁙', name: 'Macierz liter',
+  short: 'Wszystkie litery takie same czy jedna inna?',
+  how: 'Patrz w czerwoną kropkę w środku. Na chwilę pojawia się macierz liter: albo wszystkie są takie same, albo dokładnie jedna się różni. Oceń jak najszybciej: „Takie same” albo „Różne”. Kolejne zestawy pojawiają się w stałym rytmie — nie czekają na Twoją odpowiedź. Odpowiedź dotyczy ostatnio pokazanego zestawu; zestaw bez odpowiedzi liczy się jako błąd. 3 trafienia z rzędu = poziom w górę (większa macierz, krótszy czas, szybszy rytm, podobniejsze litery).',
+  score: 'Liczba trafnie ocenionych zestawów w 1 minutę. W podsumowaniu: każdy zestaw porównany z Twoją oceną (trafna / błędna / bez odpowiedzi).',
+  why: 'Odmienna litera może pojawić się w dowolnym miejscu macierzy, także na jej brzegu — żeby ją wykryć bez ruchu oczu, musisz analizować całe pole widzenia naraz. Stały rytm wymusza szybką decyzję, tak jak przy czytaniu, gdzie tekst nie czeka.',
+  run(body, signal) {
+    const MAX = 13;
+    const LETTERS = 'ABCDEFGHKLMNPRSTUWXZ';
+    const SIMILAR = [['E', 'F'], ['O', 'Q'], ['P', 'R'], ['C', 'G'], ['M', 'N'], ['U', 'V'], ['B', 'R'], ['K', 'X'], ['I', 'L'], ['D', 'O'], ['H', 'N'], ['W', 'V']];
+    const params = (L) => ({
+      size: Math.min(7, 3 + Math.floor((L - 1) / 3)),
+      exposure: Math.max(150, 700 - L * 40),
+      window: Math.max(800, 1900 - L * 80),
+      similar: L >= 4,
+    });
+    const setup = () => body.replaceChildren(levelInfo('macierz', MAX, setup), startBtn(go), lastResult('macierz'));
+    const go = () => session(body, signal, {
+      id: 'macierz', name: 'Macierz liter', unit: 'trafień', onSetup: setup,
+      level: { key: 'macierz', max: MAX },
+      lines: (x) => {
+        const log = x.log || '';
+        const ok = (log.match(/✓/g) || []).length; const bad = (log.match(/✗/g) || []).length; const miss = (log.match(/–/g) || []).length;
+        return [`Zestawy: ${log.length} · trafne ${ok} · błędne ${bad} · bez odpowiedzi ${miss}`,
+          log ? `Przebieg: ${log.slice(-48)}` : '',
+          x.missed ? `Przeoczone różnice: ${x.missed} · fałszywe „Różne”: ${x.falseAlarms || 0}` : ''];
+      },
+      async start(stage, api) {
+        Object.assign(api.extra, { log: '', missed: 0, falseAlarms: 0 });
+        let current = null;
+        const status = h('div', { class: 'status' });
+        const grid = h('div', { class: 'matrix' });
+        const field = h('div', { class: 'field sq' }, grid, h('div', { class: 'mfix' }));
+        const judge = (same) => {
+          const s = current;
+          if (!api.alive || !s || s.answer != null) return;
+          s.answer = same;
+          const good = same === s.same;
+          if (!good) { if (s.same) api.extra.falseAlarms++; else api.extra.missed++; }
+          api.extra.log += good ? '✓' : '✗';
+          api.answer(good); flash(field, good);
+        };
+        stage.replaceChildren(status, field, sameDiff(judge));
+        while (api.alive) {
+          const L = api.level; const p = params(L);
+          status.replaceChildren(h('span', { class: 'muted' }, `${p.size}×${p.size}`), h('span', { class: 'muted' }, `${p.exposure} ms · co ${((p.exposure + 120 + p.window) / 1000).toFixed(1).replace('.', ',')} s`));
+          let base; let odd;
+          if (p.similar) { const pair = shuffle(pick(SIMILAR)); [base, odd] = pair; } else { base = pick([...LETTERS]); odd = pick([...LETTERS].filter((c) => c !== base)); }
+          const n = p.size * p.size;
+          const same = Math.random() < 0.5;
+          const oddAt = same ? -1 : rand(0, n - 1);
+          const set = { same, answer: null };
+          current = set;
+          grid.style.setProperty('--n', p.size);
+          grid.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', {}, i === oddAt ? odd : base)));
+          field.classList.add('showing');
+          await api.sleep(p.exposure);
+          grid.querySelectorAll('span').forEach((s) => { s.textContent = '#'; s.classList.add('mask'); });
+          await api.sleep(120);
+          grid.replaceChildren(); field.classList.remove('showing');
+          await api.sleep(p.window);
+          if (set.answer == null && api.alive) {
+            set.answer = 'none';
+            if (!set.same) api.extra.missed++;
+            api.extra.log += '–';
+            api.answer(false); flash(field, false);
+          }
+        }
+      },
+    });
+    setup();
+  },
+});
+
 /* ---------- 3. Linia wzroku ---------- */
 ex({
   id: 'linia', group: 'Pole widzenia', icon: '⇹', name: 'Linia wzroku',
