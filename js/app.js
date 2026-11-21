@@ -88,6 +88,28 @@ const setPlan = (ids) => Store.setPref('plan', EXERCISES.map((e) => e.id).filter
 let currentEx = null; // id otwartego ćwiczenia (do przycisku „Dalej w planie”)
 
 /* ---------- Wspólne elementy UI ---------- */
+const GEAR = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+const gearBtn = (onclick) => h('button', { class: 'icon-btn gear', 'aria-label': 'Ustawienia', html: GEAR, onclick });
+
+/* ---------- Ekran nie wygasa w trakcie ćwiczenia (Screen Wake Lock API, iOS 16.4+, w aplikacji z ekranu początkowego od iOS 18.4) ---------- */
+const Wake = {
+  lock: null, want: false,
+  async on() {
+    this.want = true;
+    if (!Store.pref('wakeLock', true) || this.lock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    try {
+      this.lock = await navigator.wakeLock.request('screen');
+      this.lock.addEventListener('release', () => { this.lock = null; });
+    } catch { this.lock = null; }
+  },
+  off() { this.want = false; this.lock?.release().catch(() => {}); this.lock = null; },
+};
+// iOS zwalnia blokadę po przejściu aplikacji w tło — odzyskaj ją po powrocie.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Wake.want) Wake.on(); });
+
+/** Akcja koła zębatego na ekranie ćwiczenia (ustawiana przez ustawienia / sesję / wynik). */
+let gearAction = null;
+
 function screen(title, ex) {
   const body = h('main', { class: 'screen-body' + (ex ? ' center' : '') });
   const modal = ex?.why ? infoModal(ex) : null;
@@ -95,7 +117,12 @@ function screen(title, ex) {
     h('header', { class: 'bar' },
       h('a', { href: '#/', class: 'back', 'aria-label': 'Wróć' }, '‹'),
       h('h1', {}, title),
-      modal ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => modal.open() }, 'i') : h('span'),
+      h('div', { class: 'bar-actions' },
+        modal ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => modal.open() }, 'i') : null,
+        gearBtn(() => {
+          if (!ex) { location.hash = '#/settings'; return; }
+          if (gearAction) gearAction(); else window.scrollTo({ top: 0, behavior: 'smooth' });
+        })),
     ),
     body, modal);
   // Przy pierwszym wejściu w ćwiczenie pokaż instrukcję automatycznie.
@@ -195,6 +222,7 @@ function chart(history, unit) {
 function session(body, parentSignal, def) {
   let run = null;
   const kill = () => {
+    Wake.off();
     if (!run) return;
     run.ended = true; clearInterval(run.iv); run.ctl.abort();
     run.waiters.splice(0).forEach((f) => f());
@@ -245,6 +273,13 @@ function session(body, parentSignal, def) {
       h('div', { class: 'timebar' }, fill));
     body.classList.add('in-session');
     body.replaceChildren(controls, stage, overlay);
+    Wake.on();
+    gearAction = () => {
+      if (r.ended) { def.onSetup(); return; }
+      pause();
+      if (r.t0 && !confirm('Przerwać ćwiczenie i przejść do ustawień? Wynik tej sesji nie zostanie zapisany.')) return;
+      kill(); body.classList.remove('in-session'); gearAction = null; def.onSetup();
+    };
 
     const waitUnpaused = () => (r.paused ? new Promise((res) => r.waiters.push(res)) : Promise.resolve());
     const abortErr = () => new DOMException('abort', 'AbortError');
@@ -305,6 +340,7 @@ function session(body, parentSignal, def) {
     if (r.ended || !r.t0) return;
     r.extra.seconds = Math.min(DURATION, ((r.paused ? r.pauseAt : performance.now()) - r.t0 - r.pausedMs) / 1000);
     r.ended = true; clearInterval(r.iv); r.paused = false;
+    Wake.off();
     if (reason === 'stop' && r.extra.seconds < DURATION - 0.5) r.extra.partial = Math.round(r.extra.seconds);
     let score = r.score; let skip = false;
     const x = r.extra;
@@ -328,6 +364,7 @@ function session(body, parentSignal, def) {
     if (run !== r) return;
     body.classList.remove('in-session');
     body.replaceChildren(resultView(def, score, lines, rec, begin));
+    gearAction = () => { gearAction = null; def.onSetup(); };
     window.scrollTo(0, 0);
   };
 
@@ -351,7 +388,7 @@ function resultView(def, score, lines, rec, again) {
     nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Dalej w planie: ${nextEx.name} →`) : null,
     h('div', { class: 'row' },
       h('button', { class: 'btn' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
-      h('button', { class: 'btn', onclick: () => def.onSetup() }, 'Ustawienia')),
+      h('button', { class: 'btn', onclick: () => { gearAction = null; def.onSetup(); } }, 'Ustawienia')),
     h('a', { class: 'btn wide', href: '#/' }, 'Menu'),
   );
 }
@@ -924,7 +961,7 @@ function planSection() {
         h('button', { class: 'btn', onclick: () => { setPlan(DEFAULT_PLAN); view(); } }, 'Domyślny'),
         h('button', { class: 'btn primary', onclick: () => { setPlan([...sel]); view(); } }, 'Zapisz')));
   };
-  view();
+  if (Store.pref('openPlanEdit', false)) { Store.setPref('openPlanEdit', false); edit(); } else view();
   return wrap;
 }
 
@@ -934,7 +971,9 @@ function home() {
   return h('div', { class: 'screen' },
     h('header', { class: 'hero' },
       h('div', {}, h('h1', {}, 'ReaderProMM'), h('p', { class: 'muted' }, 'Trening szybkiego czytania')),
-      h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni'))),
+      h('div', { class: 'hero-actions' },
+        h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni')),
+        gearBtn(() => { location.hash = '#/settings'; }))),
     h('main', { class: 'screen-body home' },
       planSection(),
       h('h2', { class: 'group big' }, 'Wszystkie ćwiczenia'),
@@ -985,8 +1024,27 @@ function stats() {
       return h('div', {}, row, detail);
     })) : h('p', { class: 'muted' }, 'Brak wyników — zacznij od planu dnia.'),
     ids.length ? h('p', { class: 'muted small center-text' }, 'Stuknij ćwiczenie, aby zobaczyć wykres.') : null,
-    h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Usunąć wszystkie wyniki z tego urządzenia?')) { Store.data = { results: {}, days: [], prefs: {} }; Store.save(); route(); } } }, 'Wyczyść wyniki'),
   );
+  return view;
+}
+
+function settings() {
+  const { view, body } = screen('Ustawienia');
+  const levelKeys = Object.keys(Store.data.prefs).filter((k) => k.startsWith('lvl-'));
+  body.append(
+    h('section', { class: 'plan' },
+      h('h2', { class: 'set-h' }, 'Trening'),
+      h('label', { class: 'switch-row' },
+        h('span', {}, h('b', {}, 'Ekran nie wygasa w trakcie ćwiczeń'), h('small', {}, 'iPhone nie przyciemni ekranu podczas sesji (iOS 18.4+).')),
+        h('input', { type: 'checkbox', class: 'switch', checked: Store.pref('wakeLock', true), onchange: (e) => Store.setPref('wakeLock', e.target.checked) })),
+      h('a', { class: 'btn wide', href: '#/', onclick: () => Store.setPref('openPlanEdit', true) }, 'Edytuj plan dnia'),
+      h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => delete Store.data.prefs[k]); Store.save(); route(); } } }, 'Resetuj poziomy do 1')),
+    h('section', { class: 'plan' },
+      h('h2', { class: 'set-h' }, 'Dane'),
+      h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'),
+      h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Usunąć wszystkie wyniki i ustawienia z tego urządzenia?')) { Store.data = { results: {}, days: [], prefs: {} }; Store.save(); route(); } } }, 'Wyczyść wyniki i ustawienia'),
+      h('p', { class: 'muted small' }, 'Wszystko jest zapisane tylko na tym urządzeniu.')),
+    h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'));
   return view;
 }
 
@@ -997,7 +1055,7 @@ function route() {
   current?.abort();
   current = new AbortController();
   const [, kind, id] = (location.hash || '#/').split('/');
-  currentEx = null;
+  currentEx = null; gearAction = null;
   let view;
   if (kind === 'ex') {
     const e = EXERCISES.find((x) => x.id === id);
@@ -1007,6 +1065,7 @@ function route() {
     e.run(s.body, current.signal);
     view = s.view;
   } else if (kind === 'stats') view = stats();
+  else if (kind === 'settings') view = settings();
   else view = home();
   app.replaceChildren(view);
   window.scrollTo(0, 0);

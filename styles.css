@@ -340,3 +340,23 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
 @media (orientation: landscape) and (max-height: 560px) {
   .in-session .stage > div:has(> .samediff) { flex-basis: 100%; }
 }
+
+/* ---------- v1.5: koło zębate, ustawienia ---------- */
+.bar { grid-template-columns: 84px 1fr 84px; }
+.bar-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.icon-btn { display: grid; place-items: center; padding: 0; cursor: pointer; }
+.icon-btn.gear { border: 0; width: 34px; height: 34px; font-style: normal; color: var(--accent); }
+.icon-btn.gear:active { transform: rotate(45deg); }
+.hero-actions { display: flex; align-items: center; gap: 10px; }
+.hero-actions .gear { width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.set-h { margin: 0 0 8px; font-size: 16px; }
+.settings-gap, .plan + .plan { margin-top: 4px; }
+.plan .btn.wide + .btn.wide { margin-top: 8px; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; cursor: pointer; }
+.switch { appearance: none; -webkit-appearance: none; flex: none; width: 50px; height: 30px; border-radius: 15px; background: var(--surface-2);
+  border: 1px solid var(--line); position: relative; transition: background .2s; cursor: pointer; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s; }
+.switch:checked { background: var(--ok); border-color: var(--ok); }
+.switch:checked::after { transform: translateX(20px); }
+.btn[disabled] { opacity: .45; }
