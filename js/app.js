@@ -57,20 +57,36 @@ const Store = {
 
 /* ---------- Wspólne elementy UI ---------- */
 function screen(title, ex) {
-  const body = h('main', { class: 'screen-body' });
+  const body = h('main', { class: 'screen-body' + (ex ? ' center' : '') });
+  const modal = ex?.why ? infoModal(ex) : null;
   const view = h('div', { class: 'screen' },
     h('header', { class: 'bar' },
       h('a', { href: '#/', class: 'back', 'aria-label': 'Wróć' }, '‹'),
       h('h1', {}, title),
-      ex?.why ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => info.classList.toggle('open') }, 'i') : h('span'),
+      modal ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => modal.open() }, 'i') : h('span'),
     ),
-    body);
-  const info = ex?.why ? h('section', { class: 'info' },
-    h('h3', {}, 'Jak ćwiczyć'), h('p', {}, ex.how),
-    h('h3', {}, 'Dlaczego to działa'), h('p', {}, ex.why)) : null;
-  if (info) body.before(info);
+    body, modal);
+  // Przy pierwszym wejściu w ćwiczenie pokaż instrukcję automatycznie.
+  if (modal && !Store.pref(`seen-${ex.id}`, false)) { Store.setPref(`seen-${ex.id}`, true); modal.open(); }
   return { view, body };
 }
+
+function infoModal(ex) {
+  const close = () => { modal.hidden = true; };
+  const modal = h('div', { class: 'modal', hidden: true, onclick: (e) => { if (e.target === modal) close(); } },
+    h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': ex.name },
+      h('div', { class: 'sheet-head' },
+        h('h2', {}, ex.name),
+        h('button', { class: 'close', 'aria-label': 'Zamknij', onclick: close }, '✕')),
+      h('h3', {}, 'Jak ćwiczyć'), h('p', {}, ex.how),
+      h('h3', {}, 'Dlaczego to działa'), h('p', {}, ex.why),
+      h('button', { class: 'btn primary wide', onclick: close }, 'Rozumiem')));
+  modal.open = () => { modal.hidden = false; };
+  return modal;
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal:not([hidden])').forEach((m) => { m.hidden = true; });
+});
 
 function chips(options, value, onChange) {
   const wrap = h('div', { class: 'chips' });
@@ -176,7 +192,7 @@ ex({
   id: 'sfera', group: 'Pole widzenia', icon: '◎', name: 'Widzenie sferyczne',
   short: 'Rozpoznaj znak błyskający na obwodzie',
   how: 'Patrz wyłącznie na krzyżyk w środku. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Odpowiedz, co widziałeś. Czasem padnie pytanie o cyfrę ze środka — to pilnuje, żebyś nie uciekał wzrokiem. Promień i tempo rosną, gdy trafiasz.',
-  why: 'Ćwiczy widzenie peryferyjne we wszystkich kierunkach naraz (stąd „sferyczne”). Bardzo krótki czas ekspozycji (krótszy niż czas wykonania sakkady) wyklucza przesunięcie wzroku — rozpoznajesz znak wyłącznie peryferyjnie.',
+  why: 'Ćwiczy widzenie peryferyjne we wszystkich kierunkach naraz (stąd „sferyczne”). Bardzo krótki czas ekspozycji (poniżej ok. 200 ms — tyle trwa zaplanowanie i wykonanie ruchu oka) wyklucza przesunięcie wzroku — rozpoznajesz znak wyłącznie peryferyjnie.',
   async run(body, signal) {
     const TRIALS = 20; const MAX = 14;
     const LETTERS = 'ABCDEFHKLMNPRSTUWZ';
@@ -197,7 +213,7 @@ ex({
       await countdown(answers, signal);
       for (let t = 1; t <= TRIALS; t++) {
         const radius = Math.min(0.94, 0.18 + st.level * 0.058);
-        const exposure = Math.max(70, 260 - st.level * 14);
+        const exposure = Math.max(70, 200 - st.level * 10);
         status.replaceChildren(h('span', {}, `Próba ${t}/${TRIALS}`), h('span', {}, `Poziom ${st.level}`));
         answers.replaceChildren();
         await sleep(600, signal);
