@@ -3,6 +3,7 @@ import {
   tokenize, chunk, delayFor, wpm, adapt, dayKey, streak, UP_AFTER,
 } from './lib.js';
 import { TEXTS } from './texts.js';
+import { createReader } from './reader.js';
 
 /** Czas sesji w sekundach. Do testów można go skrócić parametrem ?t=5 */
 const DURATION = Math.max(1, Number(new URLSearchParams(location.search).get('t')) || 60);
@@ -96,7 +97,7 @@ const Wake = {
   lock: null, want: false,
   async on() {
     this.want = true;
-    if (!Store.pref('wakeLock', true) || this.lock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    if (this.lock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
     try {
       this.lock = await navigator.wakeLock.request('screen');
       this.lock.addEventListener('release', () => { this.lock = null; });
@@ -976,6 +977,7 @@ function home() {
         gearBtn(() => { location.hash = '#/settings'; }))),
     h('main', { class: 'screen-body home' },
       planSection(),
+      Reader.homeCard(),
       h('h2', { class: 'group big' }, 'Wszystkie ćwiczenia'),
       ...groups.map((g) => h('section', {},
         h('h2', { class: 'group' }, g),
@@ -1024,6 +1026,7 @@ function stats() {
       return h('div', {}, row, detail);
     })) : h('p', { class: 'muted' }, 'Brak wyników — zacznij od planu dnia.'),
     ids.length ? h('p', { class: 'muted small center-text' }, 'Stuknij ćwiczenie, aby zobaczyć wykres.') : null,
+    Reader.statsCard(),
   );
   return view;
 }
@@ -1034,9 +1037,6 @@ function settings() {
   body.append(
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Trening'),
-      h('label', { class: 'switch-row' },
-        h('span', {}, h('b', {}, 'Ekran nie wygasa w trakcie ćwiczeń'), h('small', {}, 'iPhone nie przyciemni ekranu podczas sesji (iOS 18.4+).')),
-        h('input', { type: 'checkbox', class: 'switch', checked: Store.pref('wakeLock', true), onchange: (e) => Store.setPref('wakeLock', e.target.checked) })),
       h('a', { class: 'btn wide', href: '#/', onclick: () => Store.setPref('openPlanEdit', true) }, 'Edytuj plan dnia'),
       h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => delete Store.data.prefs[k]); Store.save(); route(); } } }, 'Resetuj poziomy do 1')),
     h('section', { class: 'plan' },
@@ -1047,6 +1047,9 @@ function settings() {
     h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'));
   return view;
 }
+
+/* ---------- Czytnik i biblioteka ---------- */
+const Reader = createReader({ h, Store, screen, chips, Wake, num });
 
 /* ---------- Router ---------- */
 const app = $('#app');
@@ -1064,7 +1067,9 @@ function route() {
     const s = screen(e.name, e);
     e.run(s.body, current.signal);
     view = s.view;
-  } else if (kind === 'stats') view = stats();
+  } else if (kind === 'library') view = Reader.libraryView();
+  else if (kind === 'read' && id) view = Reader.readerView(decodeURIComponent(id), current.signal);
+  else if (kind === 'stats') view = stats();
   else if (kind === 'settings') view = settings();
   else view = home();
   app.replaceChildren(view);

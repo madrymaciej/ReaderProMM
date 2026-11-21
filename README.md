@@ -36,6 +36,24 @@ Propozycje dalszego rozwoju (przegląd aplikacji rynkowych): [docs/PROPOZYCJE.md
 
 Do testów czas sesji można skrócić parametrem `?t=5` (sekundy).
 
+## Czytnik i biblioteka (funkcje wzorowane na Outread)
+
+| Funkcja | Opis |
+|---|---|
+| Tryb **Prowadzenie** | znacznik przesuwa się po zwykłym tekście w zadanym tempie (1–5 słów naraz) |
+| Tryb **Flash** | 1–4 słowa w środku ekranu (RSVP), litera ORP na czerwono |
+| Tryb **Na głos** | czytanie syntezą mowy z podświetlaniem zdania; wybór głosu i tempa mowy |
+| Tryb **Zwykły** | czytanie stronami, bez prowadzenia |
+| Import | PDF (pdf.js, offline), EPUB bez DRM, Word .docx, RTF, TXT (UTF-8 i Windows-1250), HTML, wklejony tekst / schowek |
+| Biblioteka | wyszukiwarka, postęp i pozostały czas, zapamiętana pozycja, zmiana nazwy, usuwanie |
+| Nawigacja | ⏮/⏭ o zdanie, suwak pozycji, stuknięcie w słowo = start od niego, stuknięcie w trakcie = pauza; klawiatura: spacja, ←/→, ↑/↓ |
+| Zakładki i notatki | zakładka z notatką w dowolnym miejscu, lista z podglądem fragmentu |
+| Wygląd z podglądem na żywo | motywy (Auto, Jasny, Sepia, Szary, Ciemny, Czarny OLED), 4 czcionki, rozmiar, interlinia, 5 kolorów znacznika, pauzy na interpunkcji |
+| Statystyki czytania | słowa i czas dziś / łącznie, średnie tempo, wykres 14 dni |
+
+Bez odpowiedników (wymagałyby serwera lub natywnej aplikacji): synchronizacja między urządzeniami, rozszerzenie „Udostępnij” w Safari,
+import ze strony po adresie URL (blokada CORS), Instapaper/Pocket, przypomnienia push. Artykuły: Safari → widok Czytnik → kopiuj → „Wklej tekst”.
+
 ## Instalacja na iPhonie
 
 1. Otwórz w Safari adres `https://madrymaciej.github.io/ReaderProMM/`.
