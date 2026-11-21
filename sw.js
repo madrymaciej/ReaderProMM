@@ -1,5 +1,5 @@
 // Offline: cache aplikacji. Zmień VERSION przy każdym wydaniu, aby iPhone pobrał nowe pliki.
-const VERSION = 'rpmm-v1.1.0';
+const VERSION = 'rpmm-v1.2.0';
 const FILES = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './js/app.js', './js/lib.js', './js/texts.js',

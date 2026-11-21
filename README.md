@@ -6,20 +6,27 @@ Nie wymaga App Store, Xcode ani konta deweloperskiego Apple.
 
 ## Ćwiczenia
 
-| Grupa | Ćwiczenie | Co trenuje |
-|---|---|---|
-| Pole widzenia | Tablica Schultego (3×3–7×7) | widzenie peryferyjne, szybkie wyszukiwanie |
-| Pole widzenia | **Widzenie sferyczne** | rozpoznawanie znaków na okręgu wokół punktu fiksacji (adaptacyjny promień i czas) |
-| Pole widzenia | Linia wzroku | poziome pole widzenia — porównywanie słów po obu stronach osi |
-| Tempo | Biegające słowa (RSVP) | tempo 100–1000 sł/min, 1–3 słowa naraz, własny tekst |
-| Tempo | Ruch oczu | sakkady: poziomo, pionowo, przekątne, linijki, losowo |
-| Uwaga i pamięć | Szukanie liter | rozróżnianie podobnych liter (b/d/p/q…) |
-| Uwaga i pamięć | Szukanie liczb | precyzyjne postrzeganie ciągów cyfr |
-| Uwaga i pamięć | Zapamiętaj liczbę | rozpiętość percepcji i pamięć robocza |
-| Uwaga i pamięć | Pary słów | wyłapywanie drobnych różnic w słowach |
-| Pomiar | Test prędkości czytania | tempo × zrozumienie = efektywne tempo |
+Każde ćwiczenie trwa **1 minutę**: robisz jak najwięcej powtórzeń, a wynik trafia do historii z wykresem postępu.
+W trakcie sesji dostępne są przyciski **Stop** (powrót do ustawień, wynik nie jest zapisywany) i **Od nowa**.
 
-Dodatkowo: plan dnia (~10 min), licznik dni z rzędu, rekordy i wykresy postępu. Wyniki zapisują się lokalnie na urządzeniu.
+| Grupa | Ćwiczenie | Wynik (na minutę) |
+|---|---|---|
+| Pole widzenia | Tablica Schultego (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
+| Pole widzenia | **Widzenie sferyczne** | trafienia; adaptacyjny promień i czas ekspozycji (190→70 ms) |
+| Pole widzenia | Linia wzroku | trafienia (takie same / różne słowa po obu stronach osi) |
+| Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo 100–1000 sł/min, własny tekst |
+| Tempo | Ruch oczu | skoki wzroku (5 wzorów) |
+| Uwaga i pamięć | Szukanie liter | znalezione litery |
+| Uwaga i pamięć | Szukanie liczb | znalezione liczby |
+| Uwaga i pamięć | Zapamiętaj liczbę | poprawnie zapamiętane liczby |
+| Uwaga i pamięć | Pary słów | trafienia |
+| Pomiar | Test prędkości czytania | efektywne tempo = sł/min × zrozumienie |
+
+**Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Dalej w planie →”).
+Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
+Wyniki zapisują się lokalnie na urządzeniu.
+
+Do testów czas sesji można skrócić parametrem `?t=5` (sekundy).
 
 ## Instalacja na iPhonie
 
