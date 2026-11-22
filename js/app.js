@@ -408,7 +408,7 @@ function resultView(def, score, lines, rec, again) {
     rec && !rec.isBest ? h('div', { class: 'muted' }, `Rekord: ${num(rec.best)} ${def.unit}`) : null,
     ...lines.filter(Boolean).map((l) => h('div', { class: 'muted' }, l)),
     rec ? chart(rec.history, def.unit) : null,
-    nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Dalej w planie: ${nextEx.name} →`) : null,
+    nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Następnie: ${nextEx.name} →`) : null,
     h('button', { class: 'btn wide' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
     h('a', { class: 'btn wide', href: '#/' }, 'Zakończ'),
   );

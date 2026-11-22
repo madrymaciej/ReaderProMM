@@ -26,7 +26,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 
 Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pamięta ostatnio wybraną).
 
-**Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Dalej w planie →”).
+**Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Następnie: … →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
 
