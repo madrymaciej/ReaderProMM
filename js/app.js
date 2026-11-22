@@ -1042,32 +1042,53 @@ function planSection() {
   return wrap;
 }
 
+const HOME_TABS = [['plan', 'Plan dnia'], ['ex', 'Ćwiczenia'], ['reader', 'Czytnik']];
+
+function exerciseList() {
+  const groups = [...new Set(EXERCISES.map((e) => e.group))];
+  return groups.map((g) => h('section', {},
+    h('h2', { class: 'group' }, g),
+    h('div', { class: 'cards' }, ...EXERCISES.filter((e) => e.group === g).map((e) => {
+      const r = Object.entries(Store.data.results).filter(([id]) => id === e.id || id.startsWith(e.id + '-')).map(([, v]) => v);
+      const sessions = r.reduce((a, v) => a + v.history.length, 0);
+      return h('a', { class: 'card', href: `#/ex/${e.id}` },
+        h('span', { class: 'ico' }, e.icon),
+        h('span', { class: 'txt' }, h('b', {}, e.name), h('small', {}, e.short)),
+        Store.doneToday(e.id) ? h('span', { class: 'tick', title: 'Zrobione dziś' }, '✓') : sessions ? h('span', { class: 'cnt muted' }, sessions) : null);
+    }))));
+}
+
 function home() {
   const s = streak(Store.data.days);
-  const groups = [...new Set(EXERCISES.map((e) => e.group))];
+  let tab = Store.pref('homeTab', 'plan');
+  if (!HOME_TABS.some(([t]) => t === tab)) tab = 'plan';
+  const panel = h('main', { class: 'screen-body home' });
+  const tabs = h('nav', { class: 'tabs', role: 'tablist' });
+  const show = (t) => {
+    tab = t; Store.setPref('homeTab', t);
+    tabs.replaceChildren(...HOME_TABS.map(([id, label]) => h('button', {
+      class: 'tab' + (id === t ? ' on' : ''), role: 'tab', 'aria-selected': id === t ? 'true' : 'false', onclick: () => { show(id); window.scrollTo(0, 0); },
+    }, label)));
+    panel.dataset.tab = t;
+    if (t === 'plan') {
+      panel.replaceChildren(planSection(),
+        h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'),
+        h('p', { class: 'foot muted' }, 'Wyniki są zapisywane tylko na tym urządzeniu.'));
+    } else if (t === 'ex') {
+      panel.replaceChildren(...exerciseList(), h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'));
+    } else {
+      panel.replaceChildren(Reader.homeCard(), h('a', { class: 'btn wide', href: '#/library' }, 'Biblioteka — wszystkie teksty'), Reader.statsCard());
+    }
+  };
+  show(tab);
   return h('div', { class: 'screen' },
     h('header', { class: 'hero' },
       h('div', {}, h('h1', {}, 'ReaderProMM'), h('p', { class: 'muted' }, 'Trening szybkiego czytania')),
       h('div', { class: 'hero-actions' },
         h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni')),
         gearBtn(() => { location.hash = '#/settings'; }))),
-    h('main', { class: 'screen-body home' },
-      planSection(),
-      Reader.homeCard(),
-      h('h2', { class: 'group big' }, 'Wszystkie ćwiczenia'),
-      ...groups.map((g) => h('section', {},
-        h('h2', { class: 'group' }, g),
-        h('div', { class: 'cards' }, ...EXERCISES.filter((e) => e.group === g).map((e) => {
-          const r = Object.entries(Store.data.results).filter(([id]) => id === e.id || id.startsWith(e.id + '-')).map(([, v]) => v);
-          const sessions = r.reduce((a, v) => a + v.history.length, 0);
-          return h('a', { class: 'card', href: `#/ex/${e.id}` },
-            h('span', { class: 'ico' }, e.icon),
-            h('span', { class: 'txt' }, h('b', {}, e.name), h('small', {}, e.short)),
-            Store.doneToday(e.id) ? h('span', { class: 'tick', title: 'Zrobione dziś' }, '✓') : sessions ? h('span', { class: 'cnt muted' }, sessions) : null);
-        })))),
-      h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'),
-      h('p', { class: 'foot muted' }, 'Wyniki są zapisywane tylko na tym urządzeniu.'),
-    ));
+    tabs,
+    panel);
 }
 
 function sparkline(values) {
@@ -1113,7 +1134,7 @@ function settings() {
   body.append(
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Trening'),
-      h('a', { class: 'btn wide', href: '#/', onclick: () => Store.setPref('openPlanEdit', true) }, 'Edytuj plan dnia'),
+      h('a', { class: 'btn wide', href: '#/', onclick: () => { Store.setPref('openPlanEdit', true); Store.setPref('homeTab', 'plan'); } }, 'Edytuj plan dnia'),
       h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => delete Store.data.prefs[k]); Store.save(); route(); } } }, 'Resetuj poziomy do 1')),
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Dane'),

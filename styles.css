@@ -467,3 +467,20 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
   .in-session .stage:has(> .field.sq) > .samediff { flex-basis: auto; width: 260px; }
   .in-session .stage:has(> .field.sq) > .samediff .btn { min-height: 120px; flex-direction: column; }
 }
+
+/* ---------- Zakładki ekranu głównego ---------- */
+.tabs { position: sticky; top: 0; z-index: 6; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 16px 4px; padding: 4px;
+  border-radius: 12px; background: var(--surface-2); }
+.tab { min-height: 38px; border: 0; border-radius: 9px; background: none; color: var(--muted); font-weight: 600; font-size: 15px; cursor: pointer; }
+.tab.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .screen-body.home { display: flex; flex-direction: column; }
+  .screen-body.home > * { grid-column: auto; }
+  .screen-body.home > .plan { position: static; }
+  .screen-body.home[data-tab="ex"] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; align-items: start; }
+  .screen-body.home[data-tab="ex"] > .btn { grid-column: 1 / -1; }
+  .tabs { max-width: 520px; margin-left: auto; margin-right: auto; width: calc(100% - 32px); }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .screen-body.home[data-tab="ex"] .cards { grid-template-columns: 1fr; }
+}

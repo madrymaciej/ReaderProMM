@@ -24,6 +24,8 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Uwaga i pamięć | Pary słów | trafienia |
 | Pomiar | Test prędkości czytania | efektywne tempo = sł/min × zrozumienie |
 
+Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pamięta ostatnio wybraną).
+
 **Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Dalej w planie →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
