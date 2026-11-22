@@ -767,18 +767,30 @@ ex({
     };
     const go = () => session(body, signal, {
       id: 'oczy', name: 'Ruch oczu', unit: 'skoków', onSetup: setup,
-      lines: (x) => [`Tempo: ${x.bpm} skoków/min`],
+      lines: (x) => [x.bpmStart !== x.bpm ? `Tempo: ${x.bpmStart} → ${x.bpm} skoków/min` : `Tempo: ${x.bpm} skoków/min`],
       start(stage, api) {
-        api.extra.bpm = bpm;
+        Object.assign(api.extra, { bpm, bpmStart: bpm });
         // Pełny ekran w poziomie. Safari na iOS nie pozwala zablokować orientacji, więc przy telefonie
         // trzymanym pionowo cała plansza jest obrócona o 90° — wystarczy obrócić iPhone'a.
         try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* iOS: brak obsługi */ }
         const dot = h('div', { class: 'dot' });
         const time = h('b', { class: 'mono' }); const score = h('span', { class: 'muted' });
+        const speedEl = h('span', { class: 'eye-bpm' }, h('b', { class: 'mono' }, bpm), h('small', {}, 'skoków/min'));
+        let iv = null;
+        // Zmiana tempa w trakcie: od razu działa, zapisuje się jako tempo na następną sesję.
+        const setBpm = (v) => {
+          bpm = Math.min(240, Math.max(40, v)); Store.setPref('eyeBpm', bpm); api.extra.bpm = bpm;
+          speedEl.firstChild.textContent = bpm;
+          clearInterval(iv); iv = setInterval(tick, 60000 / bpm);
+        };
         const full = h('div', { class: 'eye-full' },
           h('div', { class: 'eye-field' }, dot),
           h('div', { class: 'eye-hud' },
             h('span', {}, time, ' · ', score),
+            h('span', { class: 'eye-speed' },
+              h('button', { class: 'btn ctl', 'aria-label': 'Wolniej', onclick: () => setBpm(bpm - 10) }, '−'),
+              speedEl,
+              h('button', { class: 'btn ctl', 'aria-label': 'Szybciej', onclick: () => setBpm(bpm + 10) }, '+')),
             h('span', { class: 'eye-btns' },
               h('button', { class: 'btn ctl', onclick: () => api.pause() }, '⏸ Pauza'),
               h('button', { class: 'btn ctl', onclick: () => api.stop() }, '⏹ Zakończ'))),
@@ -811,7 +823,7 @@ ex({
           if (k > 1) api.add();
         };
         tick();
-        const iv = setInterval(tick, 60000 / bpm);
+        iv = setInterval(tick, 60000 / bpm);
         api.signal.addEventListener('abort', () => clearInterval(iv));
       },
     });
