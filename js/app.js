@@ -872,7 +872,7 @@ ex({
               out.textContent = val || '…';
             };
             pad.replaceChildren(out, h('div', { class: 'keypad' },
-              ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => h('button', { class: 'btn' + (k === 'OK' ? ' primary' : ''), onclick: () => press(k) }, k))));
+              ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => h('button', { class: 'btn' + (k === 'OK' ? ' primary' : ''), onpointerdown: (e) => { e.preventDefault(); press(k); } }, k))));
           });
           if (!api.alive) return;
           const good = answer === n;
