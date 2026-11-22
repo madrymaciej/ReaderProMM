@@ -116,7 +116,8 @@ function screen(title, ex) {
   const modal = ex?.why ? infoModal(ex) : null;
   const view = h('div', { class: 'screen' },
     h('header', { class: 'bar' },
-      h('a', { href: '#/', class: 'back', 'aria-label': 'Wróć' }, '‹'),
+      // Wstecz: z sesji lub wyniku → ustawienia ćwiczenia; z ustawień → ekran główny.
+      h('a', { href: '#/', class: 'back', 'aria-label': 'Wróć', onclick: (e) => { if (ex && gearAction) { e.preventDefault(); gearAction(); } } }, '‹'),
       h('h1', {}, title),
       h('div', { class: 'bar-actions' },
         modal ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => modal.open() }, 'i') : null,
