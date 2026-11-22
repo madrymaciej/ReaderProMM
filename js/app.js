@@ -148,6 +148,17 @@ function screen(title, ex) {
         })),
     ),
     body, modal);
+  // Ikona ćwiczenia wyśrodkowana nad ustawieniami (jak na liście ćwiczeń); znika w trakcie sesji i na ekranie wyniku.
+  if (ex) {
+    const hero = h('div', { class: 'ex-hero' }, h('span', { class: 'ico' }, ex.icon));
+    const sync = () => {
+      const onSetup = !body.classList.contains('in-session') && !body.querySelector('.result');
+      if (onSetup && body.firstChild !== hero) body.prepend(hero);
+      else if (!onSetup && hero.isConnected) hero.remove();
+    };
+    new MutationObserver(sync).observe(body, { childList: true, attributes: true, attributeFilter: ['class'] });
+    sync();
+  }
   // Przy pierwszym wejściu w ćwiczenie pokaż instrukcję automatycznie.
   if (modal && !Store.pref(`seen-${ex.id}`, false)) { Store.setPref(`seen-${ex.id}`, true); modal.open(); }
   return { view, body };
