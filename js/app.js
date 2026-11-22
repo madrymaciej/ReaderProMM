@@ -517,7 +517,7 @@ ex({
 ex({
   id: 'macierz', group: 'Pole widzenia', icon: '⁙', name: 'Macierz liter',
   short: 'Wszystkie litery takie same czy jedna inna?',
-  how: 'Patrz w czerwoną kropkę w środku. Na chwilę pojawia się macierz liter: albo wszystkie są takie same, albo dokładnie jedna się różni. Oceń jak najszybciej: „Takie same” albo „Różne”. Kolejne zestawy pojawiają się w stałym rytmie — nie czekają na Twoją odpowiedź. Odpowiedź dotyczy ostatnio pokazanego zestawu; zestaw bez odpowiedzi liczy się jako błąd. 3 trafienia z rzędu = poziom w górę (większa macierz, krótszy czas, szybszy rytm, podobniejsze litery).',
+  how: 'Patrz w czerwoną kropkę w środku. Na chwilę pojawia się macierz liter (część pól jest pusta): albo wszystkie litery są takie same, albo dokładnie jedna się różni. Oceń jak najszybciej: „Takie same” albo „Różne”. Kolejne zestawy pojawiają się w stałym rytmie — nie czekają na Twoją odpowiedź. Odpowiedź dotyczy ostatnio pokazanego zestawu; zestaw bez odpowiedzi liczy się jako błąd. 3 trafienia z rzędu = poziom w górę (większa macierz, krótszy czas, szybszy rytm, podobniejsze litery).',
   score: 'Liczba trafnie ocenionych zestawów w 1 minutę. W podsumowaniu: każdy zestaw porównany z Twoją oceną (trafna / błędna / bez odpowiedzi).',
   why: 'Odmienna litera może pojawić się w dowolnym miejscu macierzy, także na jej brzegu — żeby ją wykryć bez ruchu oczu, musisz analizować całe pole widzenia naraz. Stały rytm wymusza szybką decyzję, tak jak przy czytaniu, gdzie tekst nie czeka.',
   run(body, signal) {
@@ -564,11 +564,15 @@ ex({
           if (p.similar) { const pair = shuffle(pick(SIMILAR)); [base, odd] = pair; } else { base = pick([...LETTERS]); odd = pick([...LETTERS].filter((c) => c !== base)); }
           const n = p.size * p.size;
           const same = Math.random() < 0.5;
-          const oddAt = same ? -1 : rand(0, n - 1);
+          // Część pól zostaje pusta (ok. 40–50%); co najmniej 2 litery na brzegu macierzy — wymusza widzenie peryferyjne.
+          const filled = new Set(shuffle([...Array(n).keys()]).slice(0, Math.max(4, Math.round(n * (0.5 + Math.random() * 0.1)))));
+          const edge = [...Array(n).keys()].filter((i) => { const r = Math.floor(i / p.size); const c = i % p.size; return r === 0 || c === 0 || r === p.size - 1 || c === p.size - 1; });
+          for (const i of shuffle(edge)) { if (edge.filter((e) => filled.has(e)).length >= 2) break; filled.add(i); }
+          const oddAt = same ? -1 : pick([...filled]);
           const set = { same, answer: null };
           current = set;
           grid.style.setProperty('--n', p.size);
-          grid.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', {}, i === oddAt ? odd : base)));
+          grid.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', {}, !filled.has(i) ? '' : i === oddAt ? odd : base)));
           field.classList.add('showing');
           await api.sleep(p.exposure);
           grid.replaceChildren(); field.classList.remove('showing');
