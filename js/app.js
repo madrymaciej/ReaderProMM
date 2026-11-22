@@ -410,6 +410,7 @@ function resultView(def, score, lines, rec, again) {
     rec ? chart(rec.history, def.unit) : null,
     nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Dalej w planie: ${nextEx.name} →`) : null,
     h('button', { class: 'btn wide' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
+    h('a', { class: 'btn wide', href: '#/' }, 'Zakończ'),
   );
 }
 
@@ -509,8 +510,6 @@ ex({
           const c = h('div', { class: 'blip center' }, center);
           field.append(c, ...nodes);
           await api.sleep(exposure);
-          [c, ...nodes].forEach((n) => { n.textContent = '#'; n.classList.add('mask'); });
-          await api.sleep(90);
           [c, ...nodes].forEach((n) => n.remove());
 
           const askCenter = Math.random() < 0.25;
@@ -872,29 +871,36 @@ ex({
       id: 'pamiec', name: 'Zapamiętaj liczbę', unit: 'liczb', onSetup: setup,
       level: { key: 'pamiec', max: MAX },
       async start(stage, api) {
-        const status = h('div', { class: 'status' }); const show = h('div', { class: 'flash' }); const pad = h('div');
-        stage.replaceChildren(status, show, pad);
+        // Klawiatura stoi na ekranie cały czas (układ się nie przesuwa), a wpisywana liczba
+        // pojawia się w tym samym polu, w którym była pokazana.
+        const status = h('div', { class: 'status' }); const show = h('div', { class: 'flash' });
+        let onKey = null;
+        const keypad = h('div', { class: 'keypad' },
+          ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => h('button', {
+            class: 'btn' + (k === 'OK' ? ' primary' : ''), onpointerdown: (e) => { e.preventDefault(); onKey?.(k); },
+          }, k)));
+        const lock = (on) => keypad.classList.toggle('locked', on);
+        stage.replaceChildren(status, show, keypad);
         while (api.alive) {
           const len = api.level + 2;
           status.replaceChildren(h('span', { class: 'muted' }, `${len} cyfr`));
-          pad.replaceChildren();
+          lock(true); show.classList.remove('typing');
           show.textContent = '+'; await api.sleep(600);
           let n = String(rand(1, 9));
           while (n.length < len) n += rand(0, 9);
           show.textContent = n.replace(/(\d{3})(?=\d)/g, '$1 ');
           await api.sleep(Math.min(1200, 300 + len * 70));
-          show.textContent = '#'.repeat(Math.min(len, 9)); await api.sleep(100);
           show.textContent = '';
+          show.classList.add('typing'); lock(false);
           const answer = await new Promise((res) => {
             let val = '';
-            const out = h('div', { class: 'typed mono' }, '…');
-            const press = (k) => {
-              if (k === '⌫') val = val.slice(0, -1); else if (k === 'OK') return res(val); else if (val.length < len + 2) val += k;
-              out.textContent = val || '…';
+            onKey = (k) => {
+              if (k === 'OK') { onKey = null; res(val); return; }
+              if (k === '⌫') val = val.slice(0, -1); else if (val.length < len + 2) val += k;
+              show.textContent = val.replace(/(\d{3})(?=\d)/g, '$1 ');
             };
-            pad.replaceChildren(out, h('div', { class: 'keypad' },
-              ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'OK'].map((k) => h('button', { class: 'btn' + (k === 'OK' ? ' primary' : ''), onpointerdown: (e) => { e.preventDefault(); press(k); } }, k))));
           });
+          lock(true); show.classList.remove('typing');
           if (!api.alive) return;
           const good = answer === n;
           api.answer(good); flash(show, good);

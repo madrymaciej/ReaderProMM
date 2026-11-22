@@ -498,3 +498,10 @@ button, .cell, .keypad { -webkit-touch-callout: none; -webkit-user-select: none;
 .lvl-val { min-width: 64px; text-align: center; }
 .lvl-num { font-size: 26px; }
 .lvl-desc { font-size: 14px; }
+
+/* Zapamiętaj liczbę: wpisywanie w tym samym polu, klawiatura zawsze na miejscu */
+.flash.typing { border-color: var(--accent); }
+.flash.typing::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 4px; background: var(--accent); animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.keypad.locked { opacity: .45; pointer-events: none; }
+.flash.typing { display: flex; align-items: center; justify-content: center; }
