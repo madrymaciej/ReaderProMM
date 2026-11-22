@@ -489,3 +489,12 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
 /* iOS: bez powiększania podwójnym stuknięciem i bez menu przytrzymania — szybkie, wielokrotne stuknięcia działają jak osobne naciśnięcia */
 html, body, button, a, input, label, .cell, .chip, .card, .pair, .paircard, .field, .rpage, .rflash { touch-action: manipulation; }
 button, .cell, .keypad { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* ---------- Wybór poziomu ---------- */
+.lvl-pick { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.lvl-pick-row { display: grid; grid-template-columns: 1fr 48px auto 48px; align-items: center; gap: 10px; }
+.lvl-pick-row .label { margin: 0; }
+.lvl-btn { min-height: 44px; padding: 0; font-size: 24px; }
+.lvl-val { min-width: 64px; text-align: center; }
+.lvl-num { font-size: 26px; }
+.lvl-desc { font-size: 14px; }

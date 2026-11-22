@@ -75,11 +75,32 @@ const Store = {
 /* ---------- Poziomy (zapamiętywane między sesjami) ---------- */
 const getLevel = (key) => Store.pref(`lvl-${key}`, 1);
 const setLevel = (key, v) => Store.setPref(`lvl-${key}`, v);
-function levelInfo(key, max, rerender) {
-  const lv = getLevel(key);
-  return h('div', { class: 'lvl-info' },
-    h('span', {}, 'Start od poziomu ', h('b', {}, lv), h('span', { class: 'muted' }, ` / ${max}`)),
-    lv > 1 ? h('button', { class: 'link', onclick: () => { setLevel(key, 1); rerender(); } }, 'Od poziomu 1') : null);
+/**
+ * Wybór poziomu na ekranie ustawień ćwiczenia: −/+ i suwak. Zapisuje od razu;
+ * w trakcie gry poziom dalej zmienia się automatycznie (3 dobrze ▲ / błąd ▼) i jest zapamiętywany.
+ */
+function levelInfo(key, max, rerender, describe) {
+  let lv = getLevel(key);
+  const val = h('b', { class: 'lvl-num mono' }, lv);
+  const desc = h('small', { class: 'muted lvl-desc' }, describe ? describe(lv) : '');
+  const range = h('input', { type: 'range', min: 1, max, step: 1, value: lv, 'aria-label': 'Poziom startowy' });
+  const minus = h('button', { class: 'btn lvl-btn', 'aria-label': 'Poziom niżej' }, '−');
+  const plus = h('button', { class: 'btn lvl-btn', 'aria-label': 'Poziom wyżej' }, '+');
+  const set = (v) => {
+    lv = Math.min(max, Math.max(1, v)); setLevel(key, lv);
+    val.textContent = lv; range.value = lv; desc.textContent = describe ? describe(lv) : '';
+    minus.disabled = lv <= 1; plus.disabled = lv >= max;
+  };
+  minus.addEventListener('click', () => set(lv - 1));
+  plus.addEventListener('click', () => set(lv + 1));
+  range.addEventListener('input', () => set(+range.value));
+  set(lv);
+  return h('div', { class: 'lvl-pick' },
+    h('div', { class: 'lvl-pick-row' },
+      h('span', { class: 'label' }, 'Poziom startowy'),
+      minus, h('span', { class: 'lvl-val' }, val, h('span', { class: 'muted' }, ` / ${max}`)), plus),
+    range, desc,
+    h('small', { class: 'muted' }, 'Potem poziom zmienia się sam: 3 trafienia z rzędu ▲, błąd ▼ — i jest zapamiętywany na następny raz.'));
 }
 
 /* ---------- Plan dnia ---------- */
@@ -460,7 +481,7 @@ ex({
     const setup = () => body.replaceChildren(
       h('p', { class: 'label' }, 'Liczba liter na obwodzie'),
       chips([[1, '1 litera'], [2, '2 litery'], [3, '3 litery']], items, (v) => { items = v; Store.setPref('sferaItems', v); setup(); }),
-      levelInfo(`sfera-${items}`, MAX, setup),
+      levelInfo(`sfera-${items}`, MAX, setup, (L) => `promień ${Math.round(Math.min(0.92, 0.18 + L * 0.056) * 100)}% pola · znak widoczny ${Math.max(70, 200 - L * 10)} ms`),
       startBtn(go), lastResult(`sfera-${items}`));
     const go = () => session(body, signal, {
       id: `sfera-${items}`, name: `Widzenie sferyczne · ${items} ${items === 1 ? 'litera' : 'litery'}`, unit: 'trafień', onSetup: setup,
@@ -530,7 +551,7 @@ ex({
       window: Math.max(800, 1900 - L * 80),
       similar: L >= 4,
     });
-    const setup = () => body.replaceChildren(levelInfo('macierz', MAX, setup), startBtn(go), lastResult('macierz'));
+    const setup = () => body.replaceChildren(levelInfo('macierz', MAX, setup, (L) => { const q = params(L); return `macierz ${q.size}×${q.size} · widoczna ${q.exposure} ms · nowy zestaw co ${((q.exposure + q.window) / 1000).toFixed(1).replace('.', ',')} s${q.similar ? ' · podobne litery' : ''}`; }), startBtn(go), lastResult('macierz'));
     const go = () => session(body, signal, {
       id: 'macierz', name: 'Macierz liter', unit: 'trafień', onSetup: setup,
       level: { key: 'macierz', max: MAX },
@@ -599,7 +620,7 @@ ex({
   why: 'Poszerza poziome pole widzenia — dokładnie ten kierunek, który wykorzystujesz w linijce tekstu. Jeśli widzisz peryferyjnie początek i koniec krótkiej linii, możesz ją objąć jedną–dwiema fiksacjami.',
   run(body, signal) {
     const MAX = 12;
-    const setup = () => body.replaceChildren(levelInfo('linia', MAX, setup), startBtn(go), lastResult('linia'));
+    const setup = () => body.replaceChildren(levelInfo('linia', MAX, setup, (L) => `odległość od osi ${Math.round(Math.min(44, 9 + L * 3.2))}% · słowa widoczne ${Math.max(100, 380 - L * 25)} ms`), startBtn(go), lastResult('linia'));
     const go = () => session(body, signal, {
       id: 'linia', name: 'Linia wzroku', unit: 'trafień', onSetup: setup,
       level: { key: 'linia', max: MAX },
@@ -773,7 +794,7 @@ ex({
   why: 'Uczy szybkiego rozróżniania kształtów liter i utrzymania koncentracji podczas skanowania. To ta sama praca wzrokowa, którą wykonujesz przy rozpoznawaniu słów — tylko wyizolowana.',
   run(body, signal) {
     const MAX = 8;
-    const setup = () => body.replaceChildren(levelInfo('litery', MAX, setup), startBtn(go), lastResult('litery'));
+    const setup = () => body.replaceChildren(levelInfo('litery', MAX, setup, (L) => `plansza 8×${3 + L} liter`), startBtn(go), lastResult('litery'));
     const go = () => session(body, signal, {
       id: 'litery', name: 'Szukanie liter', unit: 'liter', onSetup: setup,
       level: { key: 'litery', max: MAX },
@@ -813,7 +834,7 @@ ex({
   why: 'Trenuje precyzyjne postrzeganie całych ciągów znaków jednym spojrzeniem, zamiast znak po znaku. Przydatne wprost przy czytaniu tabel, faktur i raportów.',
   run(body, signal) {
     const MAX = 6;
-    const setup = () => body.replaceChildren(levelInfo('liczby', MAX, setup), startBtn(go), lastResult('liczby'));
+    const setup = () => body.replaceChildren(levelInfo('liczby', MAX, setup, (L) => `liczby ${3 + L}-cyfrowe`), startBtn(go), lastResult('liczby'));
     const go = () => session(body, signal, {
       id: 'liczby', name: 'Szukanie liczb', unit: 'liczb', onSetup: setup,
       level: { key: 'liczby', max: MAX },
@@ -846,7 +867,7 @@ ex({
   why: 'Ćwiczy „chwytanie” całej grupy znaków w jednej fiksacji i utrzymanie jej w pamięci roboczej. Przy czytaniu pozwala to obejmować wzrokiem kilka słów naraz zamiast jednego.',
   run(body, signal) {
     const MAX = 10;
-    const setup = () => body.replaceChildren(levelInfo('pamiec', MAX, setup), startBtn(go), lastResult('pamiec'));
+    const setup = () => body.replaceChildren(levelInfo('pamiec', MAX, setup, (L) => `liczba ${L + 2}-cyfrowa`), startBtn(go), lastResult('pamiec'));
     const go = () => session(body, signal, {
       id: 'pamiec', name: 'Zapamiętaj liczbę', unit: 'liczb', onSetup: setup,
       level: { key: 'pamiec', max: MAX },
@@ -895,7 +916,7 @@ ex({
   why: 'Uczy dokładnego postrzegania całego słowa na raz przy wysokim tempie. Mózg zwykle „domyśla się” słowa po kształcie — tu musisz zauważyć drobną różnicę, co wzmacnia precyzję rozpoznawania.',
   run(body, signal) {
     const MAX = 12;
-    const setup = () => body.replaceChildren(levelInfo('pary', MAX, setup), startBtn(go), lastResult('pary'));
+    const setup = () => body.replaceChildren(levelInfo('pary', MAX, setup, (L) => `słowa widoczne ${Math.max(200, 1600 - (L - 1) * 125)} ms`), startBtn(go), lastResult('pary'));
     const go = () => session(body, signal, {
       id: 'pary', name: 'Pary słów', unit: 'trafień', onSetup: setup,
       level: { key: 'pary', max: MAX },
