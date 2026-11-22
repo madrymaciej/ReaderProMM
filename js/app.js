@@ -389,7 +389,6 @@ function resultView(def, score, lines, rec, again) {
     rec ? chart(rec.history, def.unit) : null,
     nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Dalej w planie: ${nextEx.name} →`) : null,
     h('button', { class: 'btn wide' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
-    h('a', { class: 'btn wide', href: '#/' }, 'Menu'),
   );
 }
 
