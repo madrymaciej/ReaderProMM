@@ -388,9 +388,7 @@ function resultView(def, score, lines, rec, again) {
     ...lines.filter(Boolean).map((l) => h('div', { class: 'muted' }, l)),
     rec ? chart(rec.history, def.unit) : null,
     nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Dalej w planie: ${nextEx.name} →`) : null,
-    h('div', { class: 'row' },
-      h('button', { class: 'btn' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
-      h('button', { class: 'btn', onclick: () => { gearAction = null; def.onSetup(); } }, 'Ustawienia')),
+    h('button', { class: 'btn wide' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
     h('a', { class: 'btn wide', href: '#/' }, 'Menu'),
   );
 }
@@ -562,7 +560,7 @@ ex({
         stage.replaceChildren(status, field, sameDiff(judge));
         while (api.alive) {
           const L = api.level; const p = params(L);
-          status.replaceChildren(h('span', { class: 'muted' }, `${p.size}×${p.size}`), h('span', { class: 'muted' }, `${p.exposure} ms · co ${((p.exposure + 120 + p.window) / 1000).toFixed(1).replace('.', ',')} s`));
+          status.replaceChildren(h('span', { class: 'muted' }, `${p.size}×${p.size}`), h('span', { class: 'muted' }, `${p.exposure} ms · co ${((p.exposure + p.window) / 1000).toFixed(1).replace('.', ',')} s`));
           let base; let odd;
           if (p.similar) { const pair = shuffle(pick(SIMILAR)); [base, odd] = pair; } else { base = pick([...LETTERS]); odd = pick([...LETTERS].filter((c) => c !== base)); }
           const n = p.size * p.size;
@@ -574,8 +572,6 @@ ex({
           grid.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', {}, i === oddAt ? odd : base)));
           field.classList.add('showing');
           await api.sleep(p.exposure);
-          grid.querySelectorAll('span').forEach((s) => { s.textContent = '#'; s.classList.add('mask'); });
-          await api.sleep(120);
           grid.replaceChildren(); field.classList.remove('showing');
           await api.sleep(p.window);
           if (set.answer == null && api.alive) {
