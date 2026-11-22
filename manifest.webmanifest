@@ -1,6 +1,6 @@
 {
-  "name": "ReaderProMM",
-  "short_name": "ReaderProMM",
+  "name": "Szybkie czytanie",
+  "short_name": "Szybkie czytanie",
   "description": "Ćwiczenia szybkiego czytania",
   "lang": "pl",
   "start_url": "./",

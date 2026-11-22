@@ -1082,7 +1082,7 @@ function home() {
   show(tab);
   return h('div', { class: 'screen' },
     h('header', { class: 'hero' },
-      h('div', {}, h('h1', {}, 'ReaderProMM'), h('p', { class: 'muted' }, 'Trening szybkiego czytania')),
+      h('div', {}, h('h1', {}, 'Szybkie czytanie'), h('p', { class: 'muted' }, 'Trening i czytnik')),
       h('div', { class: 'hero-actions' },
         h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni')),
         gearBtn(() => { location.hash = '#/settings'; }))),

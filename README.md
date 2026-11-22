@@ -1,4 +1,4 @@
-# ReaderProMM
+# Szybkie czytanie (repozytorium ReaderProMM)
 
 Aplikacja na iPhone'a z ćwiczeniami szybkiego czytania, wzorowana na zestawie ćwiczeń z wycofanej aplikacji ReaderPro.
 Działa jako **PWA** (Progressive Web App), czyli strona instalowana na ekranie głównym. Uruchamia się na pełnym ekranie i działa offline.
