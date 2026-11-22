@@ -704,7 +704,9 @@ ex({
       if (words.length < 5) { alert('Tekst jest za krótki.'); return; }
       session(body, signal, {
         id: 'rsvp', name: 'Biegające słowa', unit: 'słów', onSetup: setup,
-        lines: (x) => [`Tempo: ${x.wpmStart} → ${x.wpm} sł/min`],
+        lines: (x) => [
+          x.textDone ? `Tekst przeczytany w całości w ${Math.round(x.seconds)} s → średnio ${Math.round((words.length / Math.max(1, x.seconds)) * 60)} sł/min` : '',
+          `Tempo: ${x.wpmStart} → ${x.wpm} sł/min`],
         start(stage, api) {
           let cur = wpmVal;
           Object.assign(api.extra, { wpm: cur, wpmStart: cur });
@@ -726,7 +728,8 @@ ex({
             const el = api.elapsed();
             if (ramp && Math.floor(el / RAMP_EVERY) > ramps) { ramps = Math.floor(el / RAMP_EVERY); setWpm(cur + ramp); }
             next.textContent = ramp ? `+${ramp} za ${Math.ceil(RAMP_EVERY - (el % RAMP_EVERY))} s` : '';
-            if (i >= parts.length) i = 0;
+            // Koniec tekstu = koniec ćwiczenia (bez zapętlania).
+            if (i >= parts.length) { api.extra.textDone = true; api.end(); return; }
             const frag = parts[i++];
             if (size === 1) {
               const chars = [...frag]; const k = orpIndex(frag);
