@@ -536,3 +536,17 @@ html.eye-mode, html.eye-mode body { overflow: hidden; }
 .eye-speed .btn { min-height: 34px; width: 44px; padding: 0; font-size: 22px; }
 .eye-bpm { display: flex; flex-direction: column; align-items: center; line-height: 1.05; min-width: 70px; }
 .eye-bpm small { font-size: 10px; color: var(--muted); }
+
+/* ---------- Ćwiczenia mieszczą się nad dolnym paskiem Safari ---------- */
+/* W karcie Safari (nie z ekranu początkowego) pływający pasek adresu zasłania dół ekranu. */
+html:not(.standalone) { --safari-bar: 84px; }
+html.standalone { --safari-bar: 0px; }
+.screen-body { padding-bottom: calc(32px + var(--safari-bar, 0px)); }
+.screen-body.in-session { padding-bottom: calc(24px + var(--safari-bar, 0px)); }
+@media (orientation: portrait) {
+  /* Plansza zmniejsza się tak, by cała sesja (plansza + odpowiedzi) zmieściła się na ekranie */
+  .in-session .field:not(.wide):not(.sq) { width: min(100%, calc(100dvh - 450px - var(--safari-bar, 0px))); margin: 0 auto; }
+  .in-session .field.sq { width: min(100%, calc(100dvh - 330px - var(--safari-bar, 0px))); margin: 0 auto; }
+  .in-session .schulte { width: min(100%, calc(100dvh - 250px - var(--safari-bar, 0px))); margin: 0 auto; }
+  .in-session .field-wrap { align-items: center; }
+}

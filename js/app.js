@@ -1246,6 +1246,10 @@ function route() {
   window.scrollTo(0, 0);
 }
 
+// Aplikacja z ekranu początkowego (pełny ekran) czy karta Safari (z paskiem narzędzi na dole)?
+const isStandalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+document.documentElement.classList.toggle('standalone', isStandalone);
+
 Store.load();
 addEventListener('hashchange', route);
 route();
