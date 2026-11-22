@@ -1080,7 +1080,7 @@ function exerciseList() {
       return h('a', { class: 'card', href: `#/ex/${e.id}` },
         h('span', { class: 'ico' }, e.icon),
         h('span', { class: 'txt' }, h('b', {}, e.name), h('small', {}, e.short)),
-        Store.doneToday(e.id) ? h('span', { class: 'tick', title: 'Zrobione dziś' }, '✓') : sessions ? h('span', { class: 'cnt muted' }, sessions) : null);
+        sessions ? h('span', { class: 'cnt muted', title: 'Liczba sesji' }, sessions) : null);
     }))));
 }
 
