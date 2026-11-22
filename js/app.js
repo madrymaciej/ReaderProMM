@@ -486,7 +486,7 @@ ex({
 ex({
   id: 'sfera', group: 'Pole widzenia', icon: '◎', name: 'Widzenie sferyczne',
   short: 'Rozpoznaj znak błyskający na obwodzie',
-  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. 3 trafienia z rzędu = poziom w górę (większy promień, krótszy czas), błąd = poziom w dół.',
+  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Potem w środku koła zobaczysz pytanie: „litera” albo „cyfra” — wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. 3 trafienia z rzędu = poziom w górę (większy promień, krótszy czas), błąd = poziom w dół.',
   score: 'Liczba trafień w 1 minutę. Poziom zapamiętuje się — kolejna sesja startuje od miejsca, w którym skończyłeś.',
   why: 'Ćwiczy widzenie peryferyjne we wszystkich kierunkach naraz (stąd „sferyczne”). Bardzo krótki czas ekspozycji (poniżej ok. 200 ms — tyle trwa zaplanowanie i wykonanie ruchu oka) wyklucza przesunięcie wzroku — rozpoznajesz znak wyłącznie peryferyjnie.',
   run(body, signal) {
@@ -502,11 +502,10 @@ ex({
       level: { key: `sfera-${items}`, max: MAX },
       async start(stage, api) {
         const status = h('div', { class: 'status' });
-        const prompt = h('div', { class: 'prompt' }, '\u00a0');
         const cross = h('div', { class: 'cross' }, '+');
         const field = h('div', { class: 'field' }, cross);
         const answers = h('div', { class: 'answers' });
-        stage.replaceChildren(status, h('div', { class: 'field-wrap' }, prompt, field), answers);
+        stage.replaceChildren(status, h('div', { class: 'field-wrap' }, field), answers);
         while (api.alive) {
           const radius = Math.min(0.92, 0.18 + api.level * 0.056);
           const exposure = Math.max(70, 200 - api.level * 10);
@@ -526,16 +525,15 @@ ex({
           [c, ...nodes].forEach((n) => n.remove());
 
           const askCenter = Math.random() < 0.25;
-          const label = askCenter ? 'Cyfra' : 'Litera';
-          prompt.textContent = label;
+          // Po błysku w środku koła (zamiast krzyżyka) pytanie: „litera” albo „cyfra” — do czasu odpowiedzi.
+          const label = askCenter ? 'cyfra' : 'litera';
           cross.textContent = label; cross.classList.add('ask');
           const correct = askCenter ? center : pick(letters);
           const pool = askCenter ? '123456789' : LETTERS;
           const opts = shuffle([correct, ...shuffle([...pool].filter((x) => !letters.includes(x) && x !== center)).slice(0, 5)]);
-          const backToCross = setTimeout(() => { cross.textContent = '+'; cross.classList.remove('ask'); }, 700);
           const chosen = await new Promise((res) => answers.replaceChildren(
             h('div', { class: 'grid3' }, ...opts.map((o) => h('button', { class: 'btn', onclick: () => res(o) }, o)))));
-          clearTimeout(backToCross); cross.textContent = '+'; cross.classList.remove('ask'); prompt.textContent = '\u00a0';
+          cross.textContent = '+'; cross.classList.remove('ask');
           if (!api.alive) return;
           const good = askCenter ? chosen === center : letters.includes(chosen);
           api.answer(good); flash(field, good);

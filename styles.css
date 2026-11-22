@@ -545,7 +545,7 @@ html.standalone { --safari-bar: 0px; }
 .screen-body.in-session { padding-bottom: calc(24px + var(--safari-bar, 0px)); }
 @media (orientation: portrait) {
   /* Plansza zmniejsza się tak, by cała sesja (plansza + odpowiedzi) zmieściła się na ekranie */
-  .in-session .field:not(.wide):not(.sq) { width: min(100%, calc(100dvh - 450px - var(--safari-bar, 0px))); margin: 0 auto; }
+  .in-session .field:not(.wide):not(.sq) { width: min(100%, calc(100dvh - 416px - var(--safari-bar, 0px))); margin: 0 auto; }
   .in-session .field.sq { width: min(100%, calc(100dvh - 330px - var(--safari-bar, 0px))); margin: 0 auto; }
   .in-session .schulte { width: min(100%, calc(100dvh - 250px - var(--safari-bar, 0px))); margin: 0 auto; }
   .in-session .field-wrap { align-items: center; }
