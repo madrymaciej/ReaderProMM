@@ -382,8 +382,7 @@ function session(body, parentSignal, def) {
     const x = r.extra;
     let lines = [
       x.partial != null ? `Zakończone wcześniej — po ${x.partial} s z ${DURATION} s` : '',
-      ...(def.level ? [`Poziom: ${x.levelStart} → ${x.level} (najwyższy: ${x.maxLevel})`,
-        `Skuteczność: ${x.trials ? Math.round((x.hits / x.trials) * 100) : 0}% (${x.hits}/${x.trials})`] : []),
+      ...(def.level ? [`Poziom: ${x.levelStart} → ${x.level} (najwyższy: ${x.maxLevel})`] : []),
       ...(def.lines ? def.lines(x) : [])];
     if (def.finalize) {
       try {
@@ -399,7 +398,8 @@ function session(body, parentSignal, def) {
     const rec = skip ? null : Store.record(def.id, score, def, extra);
     if (run !== r) return;
     body.classList.remove('in-session');
-    body.replaceChildren(resultView(def, score, lines, rec, begin));
+    const acc = def.level && x.trials ? { pct: Math.round((x.hits / x.trials) * 100), hits: x.hits, trials: x.trials } : null;
+    body.replaceChildren(resultView(def, score, lines, rec, begin, acc));
     gearAction = () => { gearAction = null; def.onSetup(); };
     window.scrollTo(0, 0);
   };
@@ -407,7 +407,7 @@ function session(body, parentSignal, def) {
   begin();
 }
 
-function resultView(def, score, lines, rec, again) {
+function resultView(def, score, lines, rec, again, acc = null) {
   const delta = rec?.prev != null ? score - rec.prev : null;
   const plan = getPlan();
   const next = plan.includes(currentEx) ? plan.find((id) => id !== currentEx && !Store.doneToday(id)) : null;
@@ -415,6 +415,9 @@ function resultView(def, score, lines, rec, again) {
   return h('div', { class: 'result' },
     h('div', { class: 'result-title' }, def.name),
     h('div', { class: 'result-big' }, num(score), h('small', {}, def.unit)),
+    // Skuteczność: zielona ≥ 85% (optimum uczenia), żółta 70–84%, czerwona < 70%
+    acc ? h('div', { class: 'acc ' + (acc.pct >= 85 ? 'good' : acc.pct >= 70 ? 'mid' : 'low') },
+      h('b', {}, `${acc.pct}%`), h('span', {}, `skuteczność · ${acc.hits}/${acc.trials}`)) : null,
     rec?.isBest ? h('div', { class: 'badge' }, '🏆 Nowy rekord!') : null,
     delta != null ? h('div', { class: 'delta ' + (delta > 0 ? 'up' : delta < 0 ? 'down' : '') },
       `${delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '= '}${num(Math.round(delta * 10) / 10)} vs poprzednia sesja`) : null,

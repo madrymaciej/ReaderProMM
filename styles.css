@@ -550,3 +550,12 @@ html.standalone { --safari-bar: 0px; }
   .in-session .schulte { width: min(100%, calc(100dvh - 250px - var(--safari-bar, 0px))); margin: 0 auto; }
   .in-session .field-wrap { align-items: center; }
 }
+
+/* Skuteczność pod wynikiem */
+.acc { display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 16px; border-radius: 999px; margin-top: -2px; }
+.acc b { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+.acc span { font-size: 15px; font-weight: 600; }
+.acc.good { background: var(--same-bg); color: var(--same-fg); }
+.acc.mid { background: rgba(245, 180, 40, .18); color: #9a6a00; }
+.acc.low { background: var(--diff-bg); color: var(--diff-fg); }
+@media (prefers-color-scheme: dark) { .acc.mid { color: #f3cf7a; } }
