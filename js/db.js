@@ -47,11 +47,13 @@ export const Library = {
     });
   },
   remove(id) { return tx('readwrite', (s) => wrap(s.delete(id))); },
-  async add({ title, text, source = 'Tekst', builtin = false }) {
+  /** Wszystkie dokumenty z pełnym tekstem (kopia zapasowa). */
+  async all() { return (await tx('readonly', (s) => wrap(s.getAll()))) || []; },
+  async add({ title, text, source = 'Tekst', builtin = false, url = '' }) {
     const words = text.split(/\s+/).filter(Boolean).length;
     const doc = {
       id: `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      title: (title || 'Bez tytułu').slice(0, 160), text, words, source, builtin,
+      title: (title || 'Bez tytułu').slice(0, 160), text, words, source, builtin, url,
       added: Date.now(), opened: 0, pos: 0, bookmarks: [], finished: false,
     };
     await this.put(doc);

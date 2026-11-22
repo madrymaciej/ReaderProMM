@@ -4,6 +4,13 @@ import {
 } from './lib.js';
 import { TEXTS } from './texts.js';
 import { createReader } from './reader.js';
+import { Library } from './db.js';
+import { normalizeText } from './importers.js';
+import { articleFromHtml } from './article.js';
+
+/** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
+const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
+const toNative = (msg) => { try { nativeBridge()?.postMessage(msg); } catch { /* brak */ } };
 
 /** Czas sesji w sekundach. Do testów można go skrócić parametrem ?t=5 */
 const DURATION = Math.max(1, Number(new URLSearchParams(location.search).get('t')) || 60);
@@ -118,13 +125,14 @@ const Wake = {
   lock: null, want: false,
   async on() {
     this.want = true;
+    if (nativeBridge()) { toNative({ type: 'wake', on: true }); return; } // w aplikacji natywnej: isIdleTimerDisabled
     if (this.lock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
     try {
       this.lock = await navigator.wakeLock.request('screen');
       this.lock.addEventListener('release', () => { this.lock = null; });
     } catch { this.lock = null; }
   },
-  off() { this.want = false; this.lock?.release().catch(() => {}); this.lock = null; },
+  off() { this.want = false; if (nativeBridge()) toNative({ type: 'wake', on: false }); this.lock?.release().catch(() => {}); this.lock = null; },
 };
 // iOS zwalnia blokadę po przejściu aplikacji w tło — odzyskaj ją po powrocie.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Wake.want) Wake.on(); });
@@ -1205,6 +1213,30 @@ function stats() {
   return view;
 }
 
+/* ---------- Kopia danych: wyniki, ustawienia, poziomy i biblioteka (np. przeniesienie PWA → aplikacja natywna) ---------- */
+async function exportData() {
+  const payload = { app: 'szybkie-czytanie', version: 1, exported: new Date().toISOString(), store: Store.data, docs: await Library.all() };
+  const json = JSON.stringify(payload);
+  const name = `szybkie-czytanie-kopia-${dayKey()}.json`;
+  if (nativeBridge()) { toNative({ type: 'export', name, json }); return; }
+  const file = new File([json], name, { type: 'application/json' });
+  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch { /* anulowano */ } }
+  const a = h('a', { href: URL.createObjectURL(file), download: name }); document.body.append(a); a.click(); a.remove();
+}
+const importInput = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.app !== 'szybkie-czytanie' || !data.store) throw new Error('To nie jest kopia danych Szybkiego czytania.');
+    if (!confirm(`Zastąpić wyniki i ustawienia kopią z ${new Date(data.exported).toLocaleString('pl-PL')}? Dokumenty z kopii zostaną dodane do biblioteki (${data.docs?.length || 0}).`)) return;
+    Store.data = { results: {}, days: [], prefs: {}, ...data.store }; Store.save();
+    const have = new Set((await Library.list()).map((d) => d.id));
+    for (const d of data.docs || []) if (!have.has(d.id)) await Library.put(d);
+    alert('Dane zaimportowane.'); route();
+  } catch (err) { alert(`Import nieudany: ${err.message}`); }
+} });
+
 function settings() {
   const { view, body } = screen('Ustawienia');
   const levelKeys = Object.keys(Store.data.prefs).filter((k) => k.startsWith('lvl-'));
@@ -1216,6 +1248,9 @@ function settings() {
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Dane'),
       h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'),
+      h('button', { class: 'btn wide', onclick: exportData }, '⬆︎ Eksportuj kopię danych'),
+      h('button', { class: 'btn wide', onclick: () => importInput.click() }, '⬇︎ Importuj kopię danych'),
+      importInput,
       h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Usunąć wszystkie wyniki i ustawienia z tego urządzenia?')) { Store.data = { results: {}, days: [], prefs: {} }; Store.save(); route(); } } }, 'Wyczyść wyniki i ustawienia'),
       h('p', { class: 'muted small' }, 'Wszystko jest zapisane tylko na tym urządzeniu.')),
     h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'));
@@ -1224,6 +1259,29 @@ function settings() {
 
 /* ---------- Czytnik i biblioteka ---------- */
 const Reader = createReader({ h, Store, screen, chips, Wake, num });
+
+/* ---------- Most: teksty udostępnione z innych aplikacji (rozszerzenie „Udostępnij” w aplikacji iOS) ---------- */
+window.ReaderBridge = {
+  async importShared(items) {
+    const ids = []; let last = null;
+    for (const it of items || []) {
+      try {
+        let title = it.title || ''; let text = it.text || '';
+        if (text.split(/\s+/).filter(Boolean).length < 20 && it.html) {
+          const a = articleFromHtml(it.html); text = a.text || text; title = title || a.title;
+        }
+        text = normalizeText(text);
+        if (text.split(/\s+/).filter(Boolean).length >= 3) {
+          last = await Library.add({ title: title || text.split('\n')[0].slice(0, 70), text, source: 'Udostępniony', url: it.url || '' });
+        }
+      } catch { /* pomiń uszkodzony element */ }
+      ids.push(it.id);
+    }
+    toNative({ type: 'imported', ids });
+    if (last) location.hash = `#/read/${last.id}`;
+    return ids.length;
+  },
+};
 
 /* ---------- Router ---------- */
 const app = $('#app');

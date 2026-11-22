@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="0" fill="#0f1115"/>
-  <circle cx="256" cy="256" r="190" fill="none" stroke="#3b82f6" stroke-width="10" opacity=".35"/>
-  <circle cx="256" cy="256" r="130" fill="none" stroke="#3b82f6" stroke-width="12" opacity=".6"/>
-  <circle cx="256" cy="256" r="70" fill="none" stroke="#60a5fa" stroke-width="14"/>
-  <circle cx="256" cy="256" r="18" fill="#f43f5e"/>
-  <text x="256" y="470" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="800" font-size="62" fill="#e5e7eb" letter-spacing="2">RP·MM</text>
+  <rect width="512" height="512" fill="#0f1115"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#3b82f6" stroke-width="12" opacity=".3"/>
+  <circle cx="256" cy="256" r="142" fill="none" stroke="#3b82f6" stroke-width="14" opacity=".55"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#60a5fa" stroke-width="16"/>
+  <circle cx="256" cy="256" r="24" fill="#f43f5e"/>
 </svg>

@@ -1,0 +1,74 @@
+# Projekt Xcode generowany przez XcodeGen:  brew install xcodegen && xcodegen
+name: SzybkieCzytanie
+options:
+  bundleIdPrefix: com.madrymaciej
+  deploymentTarget:
+    iOS: "16.4"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # Wpisz swój Team ID (Xcode → Signing & Capabilities) albo wybierz zespół w Xcode po wygenerowaniu projektu.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  SzybkieCzytanie:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.madrymaciej.szybkieczytanie
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Szybkie czytanie
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # Domena aplikacji webowej — pozwala WKWebView używać service workera (działanie offline).
+        WKAppBoundDomains: [madrymaciej.github.io]
+    entitlements:
+      path: App/App.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.madrymaciej.szybkieczytanie]
+    dependencies:
+      - target: ShareExtension
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+        excludes: [GetArticle.js]
+      - path: ShareExtension/GetArticle.js
+        buildPhase: resources
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.madrymaciej.szybkieczytanie.share
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Szybkie czytanie
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            # Safari uruchamia GetArticle.js na otwartej stronie i przekazuje wyciągnięty artykuł.
+            NSExtensionJavaScriptPreprocessingFile: GetArticle
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.madrymaciej.szybkieczytanie]

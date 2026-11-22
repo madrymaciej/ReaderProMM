@@ -1,2 +1,5 @@
 node_modules/
 .DS_Store
+# Projekt Xcode generowany przez XcodeGen (ios/project.yml)
+ios/*.xcodeproj/
+ios/build/

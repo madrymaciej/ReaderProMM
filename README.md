@@ -57,6 +57,11 @@ Do testów czas sesji można skrócić parametrem `?t=5` (sekundy).
 Bez odpowiedników (wymagałyby serwera lub natywnej aplikacji): synchronizacja między urządzeniami, rozszerzenie „Udostępnij” w Safari,
 import ze strony po adresie URL (blokada CORS), Instapaper/Pocket, przypomnienia push. Artykuły: Safari → widok Czytnik → kopiuj → „Wklej tekst”.
 
+## Aplikacja natywna iOS (menu „Udostępnij”)
+
+Kod w `ios/`, instrukcja: [docs/IOS.md](docs/IOS.md). Udostępnienie artykułu z Safari lub innej aplikacji dodaje go do Biblioteki.
+Kopię danych (wyniki, ustawienia, biblioteka) przeniesiesz przez Ustawienia → Eksportuj / Importuj kopię danych.
+
 ## Instalacja na iPhonie
 
 1. Otwórz w Safari adres `https://madrymaciej.github.io/ReaderProMM/`.
