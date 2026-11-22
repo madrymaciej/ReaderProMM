@@ -510,3 +510,25 @@ button, .cell, .keypad { -webkit-touch-callout: none; -webkit-user-select: none;
 .ex-hero { display: flex; justify-content: center; margin-bottom: 8px; }
 .ex-hero .ico { width: 84px; height: 84px; border-radius: 22px; font-size: 40px; }
 @media (orientation: landscape) and (max-height: 560px) { .ex-hero .ico { width: 56px; height: 56px; border-radius: 16px; font-size: 26px; } }
+
+/* ---------- Ruch oczu: pełny ekran w poziomie ---------- */
+html.eye-mode, html.eye-mode body { overflow: hidden; }
+.eye-full { position: fixed; z-index: 30; inset: 0; background: var(--bg); display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.eye-field { position: relative; flex: 1; margin: 6px 10px 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.eye-field .dot { width: 26px; height: 26px; margin: -13px; }
+.eye-hud { order: -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px 0; font-size: 15px; }
+.eye-btns { display: flex; gap: 8px; }
+.eye-btns .btn { min-height: 34px; padding: 4px 10px; font-size: 14px; }
+.eye-hint { display: none; }
+/* Telefon trzymany pionowo: obróć całą planszę o 90°, by zajęła ekran „w poziomie” */
+@media (orientation: portrait) {
+  .eye-full { inset: auto; top: 50%; left: 50%; width: 100vh; width: 100dvh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg);
+    padding: env(safe-area-inset-left) env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom); }
+  .eye-hint { display: block; position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px;
+    background: var(--surface-2); color: var(--muted); font-size: 13px; animation: hintfade 4s forwards; pointer-events: none; }
+}
+@keyframes hintfade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@media (orientation: portrait) {
+  html.eye-mode .pause-overlay { inset: auto; top: 50%; left: 50%; width: 100vh; width: 100dvh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg); }
+}

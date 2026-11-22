@@ -323,6 +323,8 @@ function session(body, parentSignal, def) {
       get paused() { return r.paused; },
       get level() { return st?.level ?? 1; },
       elapsed,
+      pause,
+      stop,
       /** sleep, który zatrzymuje się na czas pauzy */
       async sleep(ms) {
         let left = ms;
@@ -768,8 +770,30 @@ ex({
       lines: (x) => [`Tempo: ${x.bpm} skoków/min`],
       start(stage, api) {
         api.extra.bpm = bpm;
-        const field = h('div', { class: 'field tall' }); const dot = h('div', { class: 'dot' }); field.append(dot);
-        stage.replaceChildren(field);
+        // Pełny ekran w poziomie. Safari na iOS nie pozwala zablokować orientacji, więc przy telefonie
+        // trzymanym pionowo cała plansza jest obrócona o 90° — wystarczy obrócić iPhone'a.
+        try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* iOS: brak obsługi */ }
+        const dot = h('div', { class: 'dot' });
+        const time = h('b', { class: 'mono' }); const score = h('span', { class: 'muted' });
+        const full = h('div', { class: 'eye-full' },
+          h('div', { class: 'eye-field' }, dot),
+          h('div', { class: 'eye-hud' },
+            h('span', {}, time, ' · ', score),
+            h('span', { class: 'eye-btns' },
+              h('button', { class: 'btn ctl', onclick: () => api.pause() }, '⏸ Pauza'),
+              h('button', { class: 'btn ctl', onclick: () => api.stop() }, '⏹ Zakończ'))),
+          h('div', { class: 'eye-hint' }, '↻ Obróć iPhone\'a poziomo'));
+        document.body.append(full);
+        document.documentElement.classList.add('eye-mode');
+        const hud = setInterval(() => {
+          time.textContent = `${Math.max(0, Math.ceil(DURATION - api.elapsed()))} s`;
+          score.textContent = `skoków: ${Math.max(0, k - 1)}`;
+        }, 200);
+        api.signal.addEventListener('abort', () => {
+          clearInterval(hud); full.remove(); document.documentElement.classList.remove('eye-mode');
+          try { screen.orientation?.unlock?.(); } catch { /* brak */ }
+        });
+        stage.replaceChildren(h('p', { class: 'muted center-text' }, 'Ćwiczenie trwa na pełnym ekranie.'));
         let k = 0;
         const pos = () => {
           const s = k % 2;

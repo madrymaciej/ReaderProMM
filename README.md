@@ -17,7 +17,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Pole widzenia | **Macierz liter** (jak w ReaderPro) | trafnie ocenione zestawy: wszystkie litery takie same czy jedna inna; zestawy lecą w stałym rytmie bez czekania |
 | Pole widzenia | Linia wzroku | trafienia (takie same / różne słowa po obu stronach osi) |
 | Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst |
-| Tempo | Ruch oczu | skoki wzroku (5 wzorów) |
+| Tempo | Ruch oczu | skoki wzroku (5 wzorów); pełny ekran w poziomie (przy pionowym telefonie obraz obrócony o 90°) |
 | Uwaga i pamięć | Szukanie liter | znalezione litery |
 | Uwaga i pamięć | Szukanie liczb | znalezione liczby |
 | Uwaga i pamięć | Zapamiętaj liczbę | poprawnie zapamiętane liczby |
