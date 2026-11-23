@@ -66,12 +66,27 @@ const Store = {
     const prev = r.history.length ? r.history[r.history.length - 1].v : null;
     const isBest = r.best == null || value > r.best;
     if (isBest) r.best = value;
-    r.history.push({ t: Date.now(), v: value, ...extra });
+    const t = Date.now();
+    r.history.push({ t, v: value, ...extra });
     if (r.history.length > 200) r.history.shift();
     const today = dayKey();
     if (!this.data.days.includes(today)) this.data.days.push(today);
     this.save();
-    return { isBest: isBest && r.history.length > 1, best: r.best, prev, history: r.history };
+    return { t, isBest: isBest && r.history.length > 1, best: r.best, prev, history: r.history };
+  },
+  /** Cofa zapis jednej sesji (przycisk „Zakończ i nie zapisuj wyniku”). */
+  unrecord(id, t) {
+    const r = this.data.results[id];
+    if (!r) return;
+    r.history = r.history.filter((e) => e.t !== t);
+    if (!r.history.length) delete this.data.results[id];
+    else r.best = Math.max(...r.history.map((e) => e.v));
+    // dzień treningu usuwamy tylko, jeśli dziś nie było innej aktywności
+    const today = dayKey();
+    const other = Object.values(this.data.results).some((x) => x.history.some((e) => dayKey(new Date(e.t)) === today))
+      || (this.data.read?.days?.[today]?.words > 0);
+    if (!other) this.data.days = this.data.days.filter((d) => d !== today);
+    this.save();
   },
   doneToday(prefix) {
     const today = dayKey();
@@ -335,12 +350,13 @@ function session(body, parentSignal, def) {
         h('div', { class: 'pause-title' }, '⏸ Pauza'),
         h('button', { class: 'btn primary big wide', onclick: resume }, '▶ Wznów'),
         h('button', { class: 'btn wide', onclick: begin }, '↻ Od nowa'),
-        h('button', { class: 'btn wide', onclick: stop }, '⏹ Zakończ i zapisz wynik')));
+        h('button', { class: 'btn wide', onclick: stop }, '⏹ Zakończ i zapisz wynik'),
+        h('button', { class: 'btn wide danger', onclick: () => { kill(); location.hash = '#/'; } }, '✕ Zakończ i nie zapisuj wyniku')));
     const controls = h('div', { class: 'controls' },
       h('div', { class: 'ctl-row' },
         h('button', { class: 'btn ctl', onclick: pause, 'aria-label': 'Pauza' }, '⏸ Pauza'),
         h('div', { class: 'ctl-info' }, timeEl, h('span', { class: 'muted' }, `${def.unit}: `, scoreEl)),
-        h('button', { class: 'btn ctl', onclick: stop }, '⏹ Zakończ')),
+        h('button', { class: 'btn ctl ctl-spacer', tabindex: -1, 'aria-hidden': 'true' }, '⏸ Pauza')),
       st ? h('div', { class: 'lvl-row' }, lvlEl, dots, h('span', { class: 'muted small hint' }, `${UP_AFTER}× dobrze = ▲ · błąd = ▼`)) : null,
       h('div', { class: 'timebar' }, fill));
     body.classList.add('in-session');
@@ -465,6 +481,7 @@ function resultView(def, score, lines, rec, again, acc = null) {
     nextEx ? h('a', { class: 'btn primary wide', href: `#/ex/${next}` }, `Następnie: ${nextEx.name} →`) : null,
     h('button', { class: 'btn wide' + (nextEx ? '' : ' primary'), onclick: again }, '↻ Jeszcze raz'),
     h('a', { class: 'btn wide', href: '#/' }, 'Zakończ'),
+    rec ? h('button', { class: 'btn wide danger', onclick: () => { Store.unrecord(def.id, rec.t); location.hash = '#/'; } }, 'Zakończ i nie zapisuj wyniku') : null,
   );
 }
 
@@ -859,7 +876,7 @@ ex({
               h('button', { class: 'btn ctl', 'aria-label': 'Szybciej', onclick: () => setBpm(bpm + 10) }, '+')),
             h('span', { class: 'eye-btns' },
               h('button', { class: 'btn ctl', onclick: () => api.pause() }, '⏸ Pauza'),
-              h('button', { class: 'btn ctl', onclick: () => api.stop() }, '⏹ Zakończ'))),
+            )),
           h('div', { class: 'eye-hint' }, '↻ Obróć iPhone\'a poziomo'));
         document.body.append(full);
         document.documentElement.classList.add('eye-mode');

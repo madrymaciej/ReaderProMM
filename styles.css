@@ -575,3 +575,7 @@ html.standalone { --safari-bar: 0px; }
   .grid6 { grid-template-columns: repeat(3, 1fr); }
   .field { height: calc(var(--fh) - 6px); }
 }
+
+/* Niewidoczny odpowiednik przycisku Pauza po prawej — licznik zostaje na środku */
+.ctl-spacer { visibility: hidden; pointer-events: none; }
+@media (orientation: landscape) and (max-height: 560px) { .ctl-spacer { display: none; } }
