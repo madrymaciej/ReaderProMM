@@ -7,6 +7,7 @@ import { createReader } from './reader.js';
 import { Library } from './db.js';
 import { normalizeText } from './importers.js';
 import { articleFromHtml } from './article.js';
+import { parseInfopigula } from './infopigula.js';
 
 /** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
 const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
@@ -109,6 +110,35 @@ function levelInfo(key, max, rerender, describe) {
     range, desc,
     h('small', { class: 'muted' }, 'Potem poziom zmienia się sam: 3 trafienia z rzędu ▲, błąd ▼ — i jest zapamiętywany na następny raz.'));
 }
+
+/* ---------- Infopiguła z Gmaila (przez Twój skrypt Apps Script) ---------- */
+const Infopigula = {
+  url: () => Store.pref('infopigulaUrl', ''),
+  cached: () => Store.pref('ipCache', null),
+  /** Najnowsze wydanie (raz dziennie z sieci, potem z pamięci). Dodaje je też do Biblioteki. */
+  async latest(force = false) {
+    const url = Infopigula.url();
+    if (!url) throw new Error('Nie podłączono Infopiguły (Ustawienia → Infopiguła).');
+    const c = Infopigula.cached();
+    if (!force && c && c.day === dayKey()) return c;
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'n=1', { redirect: 'follow' });
+    if (!res.ok) throw new Error(`Błąd połączenia (${res.status}).`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const it = data.issues?.[0];
+    if (!it) throw new Error('Brak wydania z ostatnich 10 dni.');
+    const parsed = parseInfopigula(it.html);
+    if (!parsed.text) throw new Error('Nie udało się odczytać treści wydania (zmienił się format newslettera?).');
+    const out = { day: dayKey(), id: it.id, issue: parsed.issue || it.date, title: parsed.title, text: parsed.text, count: parsed.count };
+    Store.setPref('ipCache', out);
+    const inLib = Store.pref('ipLib', {});
+    if (!inLib[it.id]) {
+      const d = await Library.add({ title: parsed.title, text: parsed.text, source: 'Infopiguła' });
+      Store.setPref('ipLib', { ...inLib, [it.id]: d.id });
+    }
+    return out;
+  },
+};
 
 /* ---------- Plan dnia ---------- */
 const DEFAULT_PLAN = ['oczy', 'schulte', 'sfera', 'linia', 'rsvp'];
@@ -692,13 +722,24 @@ ex({
     const area = h('textarea', { class: 'custom', placeholder: 'Wklej tutaj własny tekst…', rows: 5 });
     area.value = Store.pref('rsvpCustom', '');
     area.addEventListener('input', () => Store.setPref('rsvpCustom', area.value));
+    const hasIp = () => !!Infopigula.url();
+    if (textId === 'infopigula' && !hasIp()) textId = TEXTS[0].id;
     const getText = () => (textId === 'custom' ? area.value : TEXTS.find((t) => t.id === textId)?.body || '');
+    const ipInfo = h('p', { class: 'muted small ip-info' });
+    const showIpInfo = () => {
+      ipInfo.hidden = textId !== 'infopigula';
+      if (ipInfo.hidden) return;
+      const c = Infopigula.cached(); const pos = Store.pref('ipPos', {});
+      ipInfo.textContent = c ? `Wydanie ${c.issue} · ${c.count} wiadomości · ${tokenize(c.text).length} słów` + (pos.id === c.id && pos.w ? ` · wznowisz od słowa ${pos.w}` : '') : 'Najnowsze wydanie pobierze się przy starcie.';
+    };
     const setup = () => {
       const wpmLabel = h('b', {}, wpmVal);
       area.hidden = textId !== 'custom';
       body.replaceChildren(
         h('p', { class: 'label' }, 'Tekst'),
-        chips([...TEXTS.map((t) => [t.id, t.title]), ['custom', 'Własny tekst']], textId, (v) => { textId = v; area.hidden = v !== 'custom'; Store.setPref('rsvpText', v); }),
+        chips([...(hasIp() ? [['infopigula', '📰 Infopiguła (dziś)']] : []), ...TEXTS.map((t) => [t.id, t.title]), ['custom', 'Własny tekst']], textId, (v) => { textId = v; area.hidden = v !== 'custom'; Store.setPref('rsvpText', v); showIpInfo(); }),
+        ipInfo,
+        hasIp() ? null : h('p', { class: 'muted small' }, 'Codzienną Infopigułę z Gmaila podłączysz w Ustawieniach (koło zębate na ekranie głównym).'),
         area,
         h('p', { class: 'label' }, 'Tempo startowe: ', wpmLabel, ' słów/min'),
         h('input', { type: 'range', min: 100, max: 1000, step: 25, value: wpmVal, oninput: (e) => { wpmVal = +e.target.value; wpmLabel.textContent = wpmVal; Store.setPref('rsvpWpm', wpmVal); } }),
@@ -707,14 +748,24 @@ ex({
         h('p', { class: 'label' }, 'Słów naraz'),
         chips([[1, '1'], [2, '2'], [3, '3']], size, (v) => { size = v; Store.setPref('rsvpChunk', v); }),
         startBtn(go), lastResult('rsvp'));
+      showIpInfo();
     };
-    const go = () => {
-      const words = tokenize(getText());
+    const go = async () => {
+      let words; let ip = null; let startW = 0;
+      if (textId === 'infopigula') {
+        try { ip = await Infopigula.latest(); } catch (e) { alert(`Infopiguła: ${e.message}`); return; }
+        words = tokenize(ip.text);
+        const pos = Store.pref('ipPos', {});
+        // Wydanie jest dłuższe niż minuta czytania — kolejna sesja wznawia od miejsca, w którym skończyłeś.
+        startW = pos.id === ip.id && pos.w < words.length - 5 ? pos.w : 0;
+        words = words.slice(startW);
+      } else words = tokenize(getText());
       if (words.length < 5) { alert('Tekst jest za krótki.'); return; }
       session(body, signal, {
         id: 'rsvp', name: 'Biegające słowa', unit: 'słów', onSetup: setup,
         lines: (x) => [
-          x.textDone ? `Tekst przeczytany w całości w ${Math.round(x.seconds)} s → średnio ${Math.round((words.length / Math.max(1, x.seconds)) * 60)} sł/min` : '',
+          ip ? (x.textDone ? `Infopiguła ${ip.issue} przeczytana do końca ✓` : `Infopiguła ${ip.issue}: przeczytano do słowa ${startW + (x.shown || 0)} z ${startW + words.length} — następna sesja wznowi od tego miejsca`) : '',
+          !ip && x.textDone ? `Tekst przeczytany w całości w ${Math.round(x.seconds)} s → średnio ${Math.round((words.length / Math.max(1, x.seconds)) * 60)} sł/min` : '',
           `Tempo: ${x.wpmStart} → ${x.wpm} sł/min`],
         start(stage, api) {
           let cur = wpmVal;
@@ -738,7 +789,7 @@ ex({
             if (ramp && Math.floor(el / RAMP_EVERY) > ramps) { ramps = Math.floor(el / RAMP_EVERY); setWpm(cur + ramp); }
             next.textContent = ramp ? `+${ramp} za ${Math.ceil(RAMP_EVERY - (el % RAMP_EVERY))} s` : '';
             // Koniec tekstu = koniec ćwiczenia (bez zapętlania).
-            if (i >= parts.length) { api.extra.textDone = true; api.end(); return; }
+            if (i >= parts.length) { api.extra.textDone = true; if (ip) Store.setPref('ipPos', { id: ip.id, w: 0 }); api.end(); return; }
             const frag = parts[i++];
             if (size === 1) {
               const chars = [...frag]; const k = orpIndex(frag);
@@ -749,6 +800,8 @@ ex({
             } else display.replaceChildren(h('div', { class: 'phrase' }, frag));
             bar.firstChild.style.width = `${(i / parts.length) * 100}%`;
             api.add(frag.split(' ').length);
+            api.extra.shown = (api.extra.shown || 0) + frag.split(' ').length;
+            if (ip) Store.setPref('ipPos', { id: ip.id, w: startW + api.extra.shown });
             timer = setTimeout(step, delayFor(frag, cur));
           };
           api.signal.addEventListener('abort', () => clearTimeout(timer));
@@ -1107,6 +1160,7 @@ function exerciseList() {
 }
 
 function home() {
+  if (Infopigula.url() && Infopigula.cached()?.day !== dayKey()) Infopigula.latest().catch(() => {}); // codzienne pobranie w tle
   const s = streak(Store.data.days);
   let tab = Store.pref('homeTab', 'plan');
   if (!HOME_TABS.some(([t]) => t === tab)) tab = 'plan';
@@ -1200,6 +1254,23 @@ const importInput = h('input', { type: 'file', accept: '.json,application/json',
   } catch (err) { alert(`Import nieudany: ${err.message}`); }
 } });
 
+function infopigulaSettings() {
+  const input = h('input', { class: 'search', type: 'url', placeholder: 'https://script.google.com/macros/s/…/exec?token=…', value: Infopigula.url() });
+  const status = h('p', { class: 'muted small' }, Infopigula.cached() ? `Ostatnio: wydanie ${Infopigula.cached().issue}` : '');
+  const test = async () => {
+    Store.setPref('infopigulaUrl', input.value.trim());
+    if (!input.value.trim()) { status.textContent = 'Odłączono.'; return; }
+    status.textContent = 'Łączenie…';
+    try { const r = await Infopigula.latest(true); status.textContent = `✓ Działa: wydanie ${r.issue}, ${r.count} wiadomości — dodane do Biblioteki i do Biegających słów.`; } catch (e) { status.textContent = `✗ ${e.message}`; }
+  };
+  return h('section', { class: 'plan' },
+    h('h2', { class: 'set-h' }, '📰 Infopiguła z Gmaila'),
+    h('p', { class: 'muted small' }, 'Codzienne wydanie trafia do Biegających słów i do Biblioteki. Adres skryptu Apps Script z Twojego konta Google — instrukcja w repozytorium: docs/INFOPIGULA.md.'),
+    input,
+    h('button', { class: 'btn wide', onclick: test }, 'Zapisz i sprawdź połączenie'),
+    status);
+}
+
 function settings() {
   const { view, body } = screen('Ustawienia');
   const levelKeys = Object.keys(Store.data.prefs).filter((k) => k.startsWith('lvl-'));
@@ -1208,6 +1279,7 @@ function settings() {
       h('h2', { class: 'set-h' }, 'Trening'),
       h('a', { class: 'btn wide', href: '#/', onclick: () => { Store.setPref('openPlanEdit', true); Store.setPref('homeTab', 'plan'); } }, 'Edytuj plan dnia'),
       h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => delete Store.data.prefs[k]); Store.save(); route(); } } }, 'Resetuj poziomy do 1')),
+    infopigulaSettings(),
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Dane'),
       h('a', { class: 'btn wide', href: '#/stats' }, 'Statystyki i postęp'),
