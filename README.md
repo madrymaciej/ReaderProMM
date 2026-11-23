@@ -15,13 +15,12 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Pole widzenia | Tablica Schultego (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
 | Pole widzenia | **Widzenie sferyczne** | trafienia; adaptacyjny promień i czas ekspozycji (190→70 ms) |
 | Pole widzenia | **Macierz liter** (jak w ReaderPro) | trafnie ocenione zestawy: wszystkie litery takie same czy jedna inna; zestawy lecą w stałym rytmie bez czekania |
-| Pole widzenia | Linia wzroku | trafienia (takie same / różne słowa po obu stronach osi) |
+| Pole widzenia | Pary słów | trafienia (takie same / różne słowa po obu stronach osi) |
 | Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst; koniec tekstu kończy ćwiczenie |
 | Tempo | Ruch oczu | skoki wzroku (5 wzorów); pełny ekran w poziomie (przy pionowym telefonie obraz obrócony o 90°) |
 | Uwaga i pamięć | Szukanie liter | znalezione litery |
 | Uwaga i pamięć | Szukanie liczb | znalezione liczby |
 | Uwaga i pamięć | Zapamiętaj liczbę | poprawnie zapamiętane liczby |
-| Uwaga i pamięć | Pary słów | trafienia |
 | Pomiar | Test prędkości czytania | efektywne tempo = sł/min × zrozumienie |
 
 Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pamięta ostatnio wybraną).
@@ -30,7 +29,7 @@ Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pami
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
 
-**Poziomy** (widzenie sferyczne, macierz liter, linia wzroku, szukanie liter i liczb, zapamiętaj liczbę, pary słów):
+**Poziomy** (widzenie sferyczne, macierz liter, pary słów, szukanie liter i liczb, zapamiętaj liczbę):
 3 poprawne odpowiedzi z rzędu = poziom +1, każdy błąd = poziom −1 (reguła schodkowa Levitta „3-down/1-up”,
 skuteczność ok. 79%). Poziom jest zapamiętywany i kolejna sesja startuje od niego. Aktualny poziom widać na górze ekranu.
 Biegające słowa przyspieszają automatycznie co 10 s (+10/+25/+50 sł/min do wyboru).

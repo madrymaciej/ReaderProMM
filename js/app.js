@@ -633,9 +633,9 @@ ex({
   },
 });
 
-/* ---------- 3. Linia wzroku ---------- */
+/* ---------- 3. Pary słów (dawniej „Linia wzroku”; id 'linia' zachowane dla wyników) ---------- */
 ex({
-  id: 'linia', group: 'Pole widzenia', icon: '⇹', name: 'Linia wzroku',
+  id: 'linia', group: 'Pole widzenia', icon: '⇹', name: 'Pary słów',
   short: 'Porównaj słowa po obu stronach osi',
   how: 'Patrz na czerwoną pionową linię. Po obu stronach błysną dwa słowa. Oceń, czy są identyczne. 3 trafienia z rzędu = poziom w górę (słowa dalej od środka, dłuższe i krócej widoczne), błąd = poziom w dół.',
   score: 'Liczba trafnych odpowiedzi w 1 minutę. Poziom zapamiętuje się między sesjami.',
@@ -644,7 +644,7 @@ ex({
     const MAX = 12;
     const setup = () => body.replaceChildren(levelInfo('linia', MAX, setup, (L) => `odległość od osi ${Math.round(Math.min(44, 9 + L * 3.2))}% · słowa widoczne ${Math.max(100, 380 - L * 25)} ms`), startBtn(go), lastResult('linia'));
     const go = () => session(body, signal, {
-      id: 'linia', name: 'Linia wzroku', unit: 'trafień', onSetup: setup,
+      id: 'linia', name: 'Pary słów', unit: 'trafień', onSetup: setup,
       level: { key: 'linia', max: MAX },
       async start(stage, api) {
         const status = h('div', { class: 'status' });
@@ -973,44 +973,6 @@ ex({
   },
 });
 
-/* ---------- 9. Pary słów ---------- */
-ex({
-  id: 'pary', group: 'Uwaga i pamięć', icon: '≠', name: 'Pary słów',
-  short: 'Oceń jak najszybciej: takie same czy różne?',
-  how: 'Pojawia się para słów — po chwili znika. Oceń, czy słowa były identyczne. Różnice są drobne: jedna litera albo zamiana kolejności. 3 trafienia z rzędu = poziom w górę (dłuższe słowa, krótszy czas), błąd = poziom w dół.',
-  score: 'Liczba trafnych odpowiedzi w 1 minutę. Poziom zapamiętuje się między sesjami.',
-  why: 'Uczy dokładnego postrzegania całego słowa na raz przy wysokim tempie. Mózg zwykle „domyśla się” słowa po kształcie — tu musisz zauważyć drobną różnicę, co wzmacnia precyzję rozpoznawania.',
-  run(body, signal) {
-    const MAX = 12;
-    const setup = () => body.replaceChildren(levelInfo('pary', MAX, setup, (L) => `słowa widoczne ${Math.max(200, 1600 - (L - 1) * 125)} ms`), startBtn(go), lastResult('pary'));
-    const go = () => session(body, signal, {
-      id: 'pary', name: 'Pary słów', unit: 'trafień', onSetup: setup,
-      level: { key: 'pary', max: MAX },
-      async start(stage, api) {
-        const status = h('div', { class: 'status' });
-        const card = h('div', { class: 'paircard' }); const btns = h('div');
-        stage.replaceChildren(status, card, btns);
-        while (api.alive) {
-          const exposure = Math.max(200, 1600 - (api.level - 1) * 125);
-          status.replaceChildren(h('span', { class: 'muted' }, `widoczne ${exposure} ms`));
-          const pool = WORDS.filter((w) => [...w].length >= Math.min(6, 2 + Math.ceil(api.level / 2)));
-          const a = pick(pool); const same = Math.random() < 0.5; const b = same ? a : mutate(a);
-          card.replaceChildren(h('span', {}, a), h('span', {}, b));
-          const hide = setTimeout(() => card.replaceChildren(h('span', { class: 'muted' }, '•••'), h('span', { class: 'muted' }, '•••')), exposure);
-          const ans = await new Promise((res) => btns.replaceChildren(sameDiff(res)));
-          clearTimeout(hide);
-          if (!api.alive) return;
-          const good = ans === same;
-          api.answer(good); flash(card, good);
-          if (!good) { card.replaceChildren(h('span', {}, a), h('span', {}, b)); await api.sleep(700); }
-          await api.sleep(150);
-        }
-      },
-    });
-    setup();
-  },
-});
-
 /* ---------- 10. Test czytania ---------- */
 ex({
   id: 'test', group: 'Pomiar', icon: '⏱', name: 'Test prędkości czytania',
@@ -1314,6 +1276,9 @@ const isStandalone = navigator.standalone === true || matchMedia('(display-mode:
 document.documentElement.classList.toggle('standalone', isStandalone);
 
 Store.load();
+// Zmiana nazw ćwiczeń (XI 2026): „Linia wzroku” → „Pary słów”; dawne „Pary słów” usunięte (historia zostaje w statystykach).
+if (Store.data.results.linia) Store.data.results.linia.name = 'Pary słów';
+if (Store.data.results.pary) Store.data.results.pary.name = 'Pary słów (dawne ćwiczenie)';
 addEventListener('hashchange', route);
 route();
 
