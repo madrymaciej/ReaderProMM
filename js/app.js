@@ -512,11 +512,12 @@ ex({
       id: `sfera-${items}`, name: `Widzenie sferyczne · ${items} ${items === 1 ? 'litera' : 'litery'}`, unit: 'trafień', onSetup: setup,
       level: { key: `sfera-${items}`, max: MAX },
       async start(stage, api) {
-        const status = h('div', { class: 'status' });
+        // Opis poziomu w rogach nad kołem (bez dodatkowej wysokości) — koło może zająć całą szerokość ekranu.
+        const status = h('div', { class: 'status sfera-status' });
         const cross = h('div', { class: 'cross' }, '+');
         const field = h('div', { class: 'field' }, cross);
-        const answers = h('div', { class: 'answers' });
-        stage.replaceChildren(status, h('div', { class: 'field-wrap' }, field), answers);
+        const answers = h('div', { class: 'answers sfera-answers' });
+        stage.replaceChildren(h('div', { class: 'field-wrap' }, status, field), answers);
         while (api.alive) {
           const radius = Math.min(0.92, 0.18 + api.level * 0.056);
           const exposure = Math.max(70, 200 - api.level * 10);
@@ -543,7 +544,7 @@ ex({
           const pool = askCenter ? '123456789' : LETTERS;
           const opts = shuffle([correct, ...shuffle([...pool].filter((x) => !letters.includes(x) && x !== center)).slice(0, 5)]);
           const chosen = await new Promise((res) => answers.replaceChildren(
-            h('div', { class: 'grid3' }, ...opts.map((o) => h('button', { class: 'btn', onclick: () => res(o) }, o)))));
+            h('div', { class: 'grid6' }, ...opts.map((o) => h('button', { class: 'btn', onclick: () => res(o) }, o)))));
           cross.textContent = '+'; cross.classList.remove('ask');
           if (!api.alive) return;
           const good = askCenter ? chosen === center : letters.includes(chosen);

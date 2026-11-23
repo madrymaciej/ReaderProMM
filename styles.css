@@ -559,3 +559,19 @@ html.standalone { --safari-bar: 0px; }
 .acc.mid { background: rgba(245, 180, 40, .18); color: #9a6a00; }
 .acc.low { background: var(--diff-bg); color: var(--diff-fg); }
 @media (prefers-color-scheme: dark) { .acc.mid { color: #f3cf7a; } }
+
+/* ---------- Widzenie sferyczne: koło na całą szerokość ---------- */
+.field-wrap { position: relative; }
+.sfera-status { position: absolute; top: 0; left: 0; right: 0; z-index: 1; padding: 0; font-size: 13px; pointer-events: none; }
+.sfera-answers { min-height: 58px; }
+.grid6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.grid6 .btn { min-height: 54px; padding: 0; font-size: 22px; font-family: ui-monospace, Menlo, monospace; }
+@media (orientation: portrait) {
+  /* Zostaje tylko: pasek u góry, sterowanie, jeden rząd odpowiedzi — reszta to koło. */
+  .in-session .field:not(.wide):not(.sq) { width: min(100%, calc(100dvh - 300px - var(--safari-bar, 0px))); }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .sfera-answers { width: 300px; }
+  .grid6 { grid-template-columns: repeat(3, 1fr); }
+  .field { height: calc(var(--fh) - 6px); }
+}
