@@ -1276,9 +1276,12 @@ const isStandalone = navigator.standalone === true || matchMedia('(display-mode:
 document.documentElement.classList.toggle('standalone', isStandalone);
 
 Store.load();
-// Zmiana nazw ćwiczeń (XI 2026): „Linia wzroku” → „Pary słów”; dawne „Pary słów” usunięte (historia zostaje w statystykach).
+// Zmiana nazw ćwiczeń (XI 2026): „Linia wzroku” → „Pary słów”; dawne ćwiczenie „Pary słów” usunięte razem z wynikami i poziomem.
 if (Store.data.results.linia) Store.data.results.linia.name = 'Pary słów';
-if (Store.data.results.pary) Store.data.results.pary.name = 'Pary słów (dawne ćwiczenie)';
+if (Store.data.results.pary || 'lvl-pary' in Store.data.prefs) {
+  delete Store.data.results.pary; delete Store.data.prefs['lvl-pary']; delete Store.data.prefs['seen-pary'];
+  Store.save();
+}
 addEventListener('hashchange', route);
 route();
 
