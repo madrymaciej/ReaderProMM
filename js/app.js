@@ -8,6 +8,7 @@ import { Library } from './db.js';
 import { normalizeText } from './importers.js';
 import { articleFromHtml } from './article.js';
 import { parseInfopigula } from './infopigula.js';
+import { makeDemo } from './demos.js';
 
 /** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
 const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
@@ -192,7 +193,7 @@ function screen(title, ex) {
     h('header', { class: 'bar' },
       // Wstecz: z sesji lub wyniku → ustawienia ćwiczenia; z ustawień → ekran główny.
       h('a', { href: '#/', class: 'back', 'aria-label': 'Wróć', onclick: (e) => { if (ex && gearAction) { e.preventDefault(); gearAction(); } } }, '‹'),
-      h('h1', {}, title),
+      h('h1', {}, ex ? h('span', { class: 'h1-ico' }, ex.icon) : null, title),
       h('div', { class: 'bar-actions' },
         modal ? h('button', { class: 'icon-btn', 'aria-label': 'Jak to działa', onclick: () => modal.open() }, 'i') : null,
         gearBtn(() => {
@@ -201,9 +202,14 @@ function screen(title, ex) {
         })),
     ),
     body, modal);
-  // Ikona ćwiczenia wyśrodkowana nad ustawieniami (jak na liście ćwiczeń); znika w trakcie sesji i na ekranie wyniku.
+  // Symulacja ćwiczenia nad ustawieniami; znika w trakcie sesji i na ekranie wyniku. Ikona jest obok nazwy w pasku.
   if (ex) {
-    const hero = h('div', { class: 'ex-hero' }, h('span', { class: 'ico' }, ex.icon));
+    // Na ekranie ustawień: zapętlona symulacja ćwiczenia (krok co 100 ms, tylko gdy jest widoczna).
+    const demo = makeDemo(ex.id, h);
+    const hero = h('div', { class: 'ex-hero' }, demo.el);
+    const sig = current?.signal;
+    const iv = setInterval(() => { if (hero.isConnected && document.visibilityState === 'visible') demo.step(); }, 100);
+    sig?.addEventListener('abort', () => clearInterval(iv), { once: true });
     const sync = () => {
       const onSetup = !body.classList.contains('in-session') && !body.querySelector('.result');
       if (onSetup && body.firstChild !== hero) body.prepend(hero);

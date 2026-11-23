@@ -1,8 +1,8 @@
 // Offline: cache aplikacji. Zmień VERSION przy każdym wydaniu, aby iPhone pobrał nowe pliki.
-const VERSION = 'rpmm-v2.9.1';
+const VERSION = 'rpmm-v2.10.0';
 const FILES = [
   './', './index.html', './styles.css', './manifest.webmanifest',
-  './js/app.js', './js/article.js', './js/infopigula.js', './js/lib.js', './js/texts.js', './js/reader.js', './js/db.js', './js/importers.js', './js/textmodel.js',
+  './js/app.js', './js/article.js', './js/infopigula.js', './js/demos.js', './js/lib.js', './js/texts.js', './js/reader.js', './js/db.js', './js/importers.js', './js/textmodel.js',
   './vendor/pdfjs/pdf.min.js', './vendor/pdfjs/pdf.worker.min.js',
   './icons/icon.svg', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
