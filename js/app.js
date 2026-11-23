@@ -9,6 +9,7 @@ import { normalizeText } from './importers.js';
 import { articleFromHtml } from './article.js';
 import { parseInfopigula } from './infopigula.js';
 import { makeDemo } from './demos.js';
+import { openTutorial } from './tutorials.js';
 
 /** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
 const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
@@ -206,7 +207,8 @@ function screen(title, ex) {
   if (ex) {
     // Na ekranie ustawień: zapętlona symulacja ćwiczenia (krok co 100 ms, tylko gdy jest widoczna).
     const demo = makeDemo(ex.id, h);
-    const hero = h('div', { class: 'ex-hero' }, demo.el);
+    const hero = h('div', { class: 'ex-hero' }, demo.el,
+      h('button', { class: 'link tut-open', onclick: () => openTutorial(ex, h) }, '▶ Samouczek'));
     const sig = current?.signal;
     const iv = setInterval(() => { if (hero.isConnected && document.visibilityState === 'visible') demo.step(); }, 100);
     sig?.addEventListener('abort', () => clearInterval(iv), { once: true });
@@ -218,8 +220,8 @@ function screen(title, ex) {
     new MutationObserver(sync).observe(body, { childList: true, attributes: true, attributeFilter: ['class'] });
     sync();
   }
-  // Przy pierwszym wejściu w ćwiczenie pokaż instrukcję automatycznie.
-  if (modal && !Store.pref(`seen-${ex.id}`, false)) { Store.setPref(`seen-${ex.id}`, true); modal.open(); }
+  // Przy pierwszym wejściu: samouczek (3 kroki z próbą). Instrukcja tekstowa — pod przyciskiem „i”.
+  if (ex && !Store.pref(`tut-${ex.id}`, false)) { Store.setPref(`tut-${ex.id}`, true); Store.setPref(`seen-${ex.id}`, true); setTimeout(() => openTutorial(ex, h), 0); }
   return { view, body };
 }
 
@@ -233,7 +235,8 @@ function infoModal(ex) {
       h('h3', {}, 'Jak ćwiczyć'), h('p', {}, ex.how),
       h('h3', {}, 'Wynik'), h('p', {}, ex.score),
       h('h3', {}, 'Dlaczego to działa'), h('p', {}, ex.why),
-      h('button', { class: 'btn primary wide', onclick: close }, 'Rozumiem')));
+      h('button', { class: 'btn primary wide', onclick: close }, 'Rozumiem'),
+      h('button', { class: 'btn wide', style: 'margin-top:8px', onclick: () => { close(); openTutorial(ex, h); } }, '▶ Pokaż samouczek')));
   modal.open = () => { modal.hidden = false; };
   return modal;
 }
@@ -679,6 +682,69 @@ ex({
             api.extra.log += '–';
             api.answer(false); flash(field, false);
           }
+        }
+      },
+    });
+    setup();
+  },
+});
+
+/* ---------- 2c. Widzenie boczne ---------- */
+ex({
+  id: 'boczne', group: 'Pole widzenia', icon: '⌖', name: 'Widzenie boczne',
+  short: 'Cztery żółte litery na brzegach — wszystkie takie same?',
+  how: 'Patrz na kropkę w środku siatki. Cztery żółte pola leżą na brzegach: u góry, na dole, po lewej i po prawej. Gdy żółte litery NIE są wszystkie takie same — stuknij „Znaleziono różnicę”. Gdy są takie same — nie stukaj, poczekaj na kolejny zestaw. Zestawy zmieniają się same.',
+  score: 'Liczba trafnych decyzji w 1 minutę: stuknięcie przy różnicy i wstrzymanie się, gdy litery są takie same. Fałszywe stuknięcie i przeoczona różnica to błędy.',
+  why: 'Żółte pola są daleko od punktu fiksacji, więc rozpoznajesz je wyłącznie widzeniem peryferyjnym, a otaczające losowe litery utrudniają zadanie (tzw. zatłoczenie wzrokowe). Decyzja „stukam / czekam” uczy szybkiego, kontrolowanego reagowania na to, co widać kątem oka.',
+  run(body, signal) {
+    const MAX = 12;
+    const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const SIMILAR = { E: 'F', F: 'E', O: 'Q', Q: 'O', P: 'R', R: 'P', C: 'G', G: 'C', M: 'N', N: 'M', U: 'V', V: 'U', I: 'L', L: 'I', D: 'O', H: 'N', K: 'X', B: 'R', W: 'V', T: 'I' };
+    const params = (L) => ({ size: 5 + 2 * Math.floor((L - 1) / 4), show: Math.max(900, 2600 - (L - 1) * 150), similar: L >= 4 });
+    const setup = () => body.replaceChildren(
+      levelInfo('boczne', MAX, setup, (L) => { const q = params(L); return `siatka ${q.size}×${q.size} · zestaw co ${(q.show / 1000).toFixed(1).replace('.', ',')} s${q.similar ? ' · podobne litery' : ''}`; }),
+      startBtn(go), lastResult('boczne'));
+    const go = () => session(body, signal, {
+      id: 'boczne', name: 'Widzenie boczne', unit: 'trafień', onSetup: setup,
+      level: { key: 'boczne', max: MAX },
+      lines: (x) => [x.missed || x.falseAlarms ? `Przeoczone różnice: ${x.missed || 0} · fałszywe stuknięcia: ${x.falseAlarms || 0}` : ''],
+      async start(stage, api) {
+        Object.assign(api.extra, { missed: 0, falseAlarms: 0 });
+        let trial = null;
+        const grid = h('div', { class: 'side-grid' });
+        const btn = h('button', { class: 'btn big wide side-btn', onpointerdown: (e) => {
+          e.preventDefault();
+          if (!api.alive || !trial || trial.done) return;
+          trial.done = true;
+          const good = !trial.same;
+          if (!good) api.extra.falseAlarms++;
+          api.answer(good); flash(btn, good);
+          trial.resolve();
+        } }, 'Znaleziono różnicę');
+        stage.replaceChildren(h('div', { class: 'side-wrap' }, grid), h('p', { class: 'muted small center-text' }, 'Stuknij, gdy żółte litery nie są wszystkie takie same.'), btn);
+        while (api.alive) {
+          const L = api.level; const p = params(L); const n = p.size; const mid = (n - 1) / 2;
+          const base = pick([...ABC]); const same = Math.random() < 0.5;
+          const odd = p.similar && SIMILAR[base] ? SIMILAR[base] : pick([...ABC].filter((c) => c !== base));
+          const spots = [mid, mid * n, mid * n + n - 1, (n - 1) * n + mid]; // góra, lewo, prawo, dół
+          const oddSpot = same ? -1 : pick(spots);
+          grid.style.setProperty('--n', n);
+          grid.replaceChildren(...Array.from({ length: n * n }, (_, i) => {
+            if (i === mid * n + mid) return h('span', { class: 'side-dot' }, '•');
+            if (spots.includes(i)) return h('span', { class: 'side-spot' }, i === oddSpot ? odd : base);
+            return h('span', {}, pick([...ABC].filter((c) => c !== base && c !== odd)));
+          }));
+          let resolve; const tapped = new Promise((r) => { resolve = r; });
+          trial = { same, done: false, resolve };
+          await Promise.race([api.sleep(p.show), tapped]);
+          if (!api.alive) return;
+          if (!trial.done) { // brak stuknięcia: dobrze, jeśli litery były takie same
+            trial.done = true;
+            if (!same) api.extra.missed++;
+            api.answer(same);
+            if (!same) flash(btn, false);
+          }
+          await api.sleep(250);
         }
       },
     });
@@ -1349,6 +1415,7 @@ function route() {
   current = new AbortController();
   const [, kind, id] = (location.hash || '#/').split('/');
   currentEx = null; gearAction = null;
+  document.querySelectorAll('body > .tut').forEach((t) => t.remove());
   let view;
   if (kind === 'ex') {
     const e = EXERCISES.find((x) => x.id === id);

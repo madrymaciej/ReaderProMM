@@ -14,6 +14,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 |---|---|---|
 | Pole widzenia | Tablica Schulte’a (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
 | Pole widzenia | **Widzenie sferyczne** | trafienia; adaptacyjny promień i czas ekspozycji (190→70 ms) |
+| Pole widzenia | **Widzenie boczne** | trafne decyzje: stuknij, gdy 4 żółte litery na brzegach siatki nie są takie same; czekaj, gdy są |
 | Pole widzenia | **Macierz liter** (jak w ReaderPro) | trafnie ocenione zestawy: wszystkie litery takie same czy jedna inna; zestawy lecą w stałym rytmie bez czekania |
 | Pole widzenia | Pary słów | trafienia (takie same / różne słowa po obu stronach osi) |
 | Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst; koniec tekstu kończy ćwiczenie |
@@ -23,13 +24,15 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Uwaga i pamięć | Zapamiętaj liczbę | poprawnie zapamiętane liczby |
 | Pomiar | Test prędkości czytania | efektywne tempo = sł/min × zrozumienie |
 
+Każde ćwiczenie ma **samouczek** (3 kroki z próbą na przykładzie) — otwiera się przy pierwszym wejściu, potem „▶ Samouczek” na ekranie ustawień. Nad ustawieniami jest animowana symulacja ćwiczenia.
+
 Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pamięta ostatnio wybraną).
 
 **Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Następnie: … →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
 
-**Poziomy** (widzenie sferyczne, macierz liter, pary słów, szukanie liter i liczb, zapamiętaj liczbę):
+**Poziomy** (widzenie sferyczne, widzenie boczne, macierz liter, pary słów, szukanie liter i liczb, zapamiętaj liczbę):
 3 poprawne odpowiedzi z rzędu = poziom +1, każdy błąd = poziom −1 (reguła schodkowa Levitta „3-down/1-up”,
 skuteczność ok. 79%). Poziom jest zapamiętywany i kolejna sesja startuje od niego. Aktualny poziom widać na górze ekranu.
 Biegające słowa przyspieszają automatycznie co 10 s (+10/+25/+50 sł/min do wyboru).

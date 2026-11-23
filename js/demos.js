@@ -59,6 +59,24 @@ export function makeDemo(id, h) {
       };
       break;
     }
+    case 'boczne': {
+      const n = 5; const grid = h('div', { class: 'd-side', style: `--n:${n}` }); const verdict = h('div', { class: 'd-verdict' });
+      box.append(grid, verdict);
+      const spots = [2, 10, 14, 22];
+      step = (k) => {
+        const t = k % 22;
+        if (t === 1) {
+          const same = Math.random() < 0.5; const base = pick([...LETTERS]); const odd = pick([...LETTERS].filter((c) => c !== base)); const oddAt = same ? -1 : pick(spots);
+          grid.dataset.same = same ? '1' : '';
+          grid.replaceChildren(...[...Array(n * n)].map((_, i) => (i === 12 ? h('b', {}, '•') : spots.includes(i) ? h('span', { class: 'spot' }, i === oddAt ? odd : base) : h('span', {}, pick([...LETTERS])))));
+          verdict.textContent = ''; verdict.className = 'd-verdict';
+        } else if (t === 12) {
+          const s = grid.dataset.same === '1';
+          verdict.textContent = s ? 'takie same — czekaj' : '≠ różnica — stuknij!'; verdict.className = `d-verdict ${s ? 'same' : 'diff'}`;
+        }
+      };
+      break;
+    }
     case 'linia': {
       const field = h('div', { class: 'd-line' }, h('i', { class: 'd-axis' })); const verdict = h('div', { class: 'd-verdict' });
       const L = h('span', { class: 'd-wl' }); const R = h('span', { class: 'd-wr' }); field.append(L, R);
