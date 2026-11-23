@@ -498,9 +498,9 @@ function resultView(def, score, lines, rec, again, acc = null) {
 const EXERCISES = [];
 const ex = (def) => EXERCISES.push(def);
 
-/* ---------- 1. Tablica Schultego ---------- */
+/* ---------- 1. Tablica Schulte’a ---------- */
 ex({
-  id: 'schulte', group: 'Pole widzenia', icon: '▦', name: 'Tablica Schultego',
+  id: 'schulte', group: 'Pole widzenia', icon: '▦', name: 'Tablica Schulte’a',
   short: 'Znajdź liczby po kolei, patrząc w środek',
   how: 'Patrz w środek tablicy (kropka). Nie przesuwaj wzroku — wyszukuj kolejne liczby od 1 widzeniem peryferyjnym i stukaj w nie. Po ukończeniu tablicy od razu pojawia się następna. Zacznij od 3×3 lub 4×4, standardem jest 5×5.',
   score: 'Liczba liczb znalezionych w 1 minutę (osobny rekord dla każdego rozmiaru).',

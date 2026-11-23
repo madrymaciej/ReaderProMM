@@ -9,7 +9,7 @@ otwarcia stron, więc to poziom „opis w sklepie”). Wysiłek: S = godziny, M 
 |---|---|---|---|---|
 | 1 | Test startowy + cel | Pierwszy pomiar tempa i zrozumienia, ustawienie celu (np. 400 sł/min) i plan dnia dobrany do wyniku | Acceleread, Reading Trainer | S–M |
 | 2 | Nawigacja w Biegających słowach | Cofnij o zdanie / akapit, suwak pozycji (recenzenci narzekają na brak w czytnikach Spritz) | luka w ReadOwl | S |
-| 3 | Warianty Schultego | „Shift” (tasowanie po każdym trafieniu), litery zamiast cyfr, obrócone znaki | aplikacje Schulte | S |
+| 3 | Warianty tablicy Schulte’a | „Shift” (tasowanie po każdym trafieniu), litery zamiast cyfr, obrócone znaki | aplikacje Schulte | S |
 | 4 | Pacer na zwykłym tekście | Podświetlenie przesuwa się po akapicie w zadanym tempie — trening w naturalnym układzie strony | Outread (Guide), SwiftRead | M |
 | 5 | Dźwięk zamiast wibracji | iOS Safari nie obsługuje wibracji z poziomu strony — krótki dźwięk trafienia/błędu (z wyłącznikiem) | aplikacje Schulte | S |
 | 6 | Pulpit postępu tempa | Jeden wykres: tempo i zrozumienie z testów w czasie + rekordy | Reading Trainer, ReaderPro | S |

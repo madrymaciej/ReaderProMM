@@ -12,7 +12,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 
 | Grupa | Ćwiczenie | Wynik (na minutę) |
 |---|---|---|
-| Pole widzenia | Tablica Schultego (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
+| Pole widzenia | Tablica Schulte’a (3×3–7×7) | znalezione liczby (kolejne tablice pojawiają się automatycznie) |
 | Pole widzenia | **Widzenie sferyczne** | trafienia; adaptacyjny promień i czas ekspozycji (190→70 ms) |
 | Pole widzenia | **Macierz liter** (jak w ReaderPro) | trafnie ocenione zestawy: wszystkie litery takie same czy jedna inna; zestawy lecą w stałym rytmie bez czekania |
 | Pole widzenia | Pary słów | trafienia (takie same / różne słowa po obu stronach osi) |
