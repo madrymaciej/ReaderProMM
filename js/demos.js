@@ -77,6 +77,19 @@ export function makeDemo(id, h) {
       };
       break;
     }
+    case 'niepary': {
+      const grid = h('div', { class: 'd-np' }); const cap = h('div', { class: 'demo-cap' }); box.append(grid, cap);
+      const W = ['dom', 'kawa', 'rynek', 'mapa', 'okno', 'koszt', 'lampa', 'umowa', 'cena']; let odd = []; let tiles = [];
+      const reset = () => {
+        const ws = shuffle(W); odd = shuffle([...Array(9).keys()]).slice(0, 2);
+        const mut = (w) => w.slice(0, -1) + (w.endsWith('a') ? 'o' : 'a');
+        tiles = ws.map((w, i) => h('div', {}, h('span', {}, w), h('span', {}, odd.includes(i) ? mut(w) : w)));
+        grid.replaceChildren(...tiles); cap.textContent = 'pozostało: 2';
+      };
+      reset();
+      step = (k) => { const t = k % 30; if (t === 10) { tiles[odd[0]].classList.add('hit'); cap.textContent = 'pozostało: 1'; } else if (t === 18) { tiles[odd[1]].classList.add('hit'); cap.textContent = 'pozostało: 0'; } else if (t === 0) reset(); };
+      break;
+    }
     case 'linia': {
       const field = h('div', { class: 'd-line' }, h('i', { class: 'd-axis' })); const verdict = h('div', { class: 'd-verdict' });
       const L = h('span', { class: 'd-wl' }); const R = h('span', { class: 'd-wr' }); field.append(L, R);

@@ -19,6 +19,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Pole widzenia | Pary słów | trafienia (takie same / różne słowa po obu stronach osi) |
 | Tempo | Czytanie w miejscu (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst; koniec tekstu kończy ćwiczenie |
 | Tempo | Ruch oczu | skoki wzroku (5 wzorów); pełny ekran w poziomie (przy pionowym telefonie obraz obrócony o 90°) |
+| Uwaga i pamięć | **Niepasujące pary** | znalezione pary w siatce kafelków, w których słowa się różnią |
 | Uwaga i pamięć | Szukanie liter | znalezione litery |
 | Uwaga i pamięć | Szukanie liczb | znalezione liczby |
 | Uwaga i pamięć | Zapamiętaj liczbę | poprawnie zapamiętane liczby |

@@ -271,11 +271,15 @@ function lastResult(id) {
   return h('p', { class: 'muted small center-text' }, `Ostatnio: ${num(r.history.at(-1).v)} ${r.unit} · rekord: ${num(r.best)} ${r.unit} · sesji: ${r.history.length}`);
 }
 
-async function countdown(el, signal) {
-  for (const n of ['3', '2', '1']) {
-    el.replaceChildren(h('div', { class: 'countdown' }, n));
-    await sleep(500, signal);
-  }
+/** Ekran startowy przed ćwiczeniem: pierścień wypełnia się w 1,8 s, pod nim ikona, nazwa i poziom. */
+async function countdown(el, signal, info = null) {
+  const ex = EXERCISES.find((e) => e.id === currentEx);
+  const ring = svgEl('svg', { viewBox: '0 0 100 100', class: 'start-ring' });
+  ring.append(svgEl('circle', { cx: 50, cy: 50, r: 44, class: 'track' }), svgEl('circle', { cx: 50, cy: 50, r: 44, class: 'fill', pathLength: 100 }), svgEl('circle', { cx: 50, cy: 50, r: 5, class: 'dot' }));
+  el.replaceChildren(h('div', { class: 'start-splash' }, ring,
+    h('div', { class: 'start-name' }, ex ? h('span', { class: 'ico' }, ex.icon) : null, h('b', {}, info?.name || ex?.name || '')),
+    info?.level ? h('span', { class: 'start-level' }, `Poziom ${info.level}`) : null));
+  await sleep(1800, signal);
   el.replaceChildren();
 }
 
@@ -424,7 +428,7 @@ function session(body, parentSignal, def) {
       extra: r.extra,
       end: () => finish(r, stage, 'end'),
     };
-    try { await countdown(stage, ctl.signal); } catch { return; }
+    try { await countdown(stage, ctl.signal, { level: st?.level }); } catch { return; }
     r.t0 = performance.now();
     r.iv = setInterval(() => {
       if (r.paused) return;
@@ -749,6 +753,61 @@ ex({
           }
           await api.sleep(250);
         }
+      },
+    });
+    setup();
+  },
+});
+
+/* ---------- 3b. Niepasujące pary (siatka par słów) ---------- */
+ex({
+  id: 'niepary', group: 'Uwaga i pamięć', icon: '⧉', name: 'Niepasujące pary',
+  short: 'Stukaj kafelki, w których dwa słowa się różnią',
+  how: 'Każdy kafelek zawiera dwa słowa jedno pod drugim. Większość par jest identyczna, ale kilka różni się jedną literą albo kolejnością liter. Stukaj tylko kafelki z różniącymi się słowami. Gdy znajdziesz wszystkie na planszy, pojawi się nowa. Stuknięcie pasującej pary to błąd.',
+  score: 'Liczba znalezionych niepasujących par w 1 minutę. Poziom zapamiętuje się — wyższy to więcej kafelków, więcej różnic i dłuższe słowa.',
+  why: 'Szybkie porównywanie całych słów uczy rozpoznawać wyraz jednym spojrzeniem, a jednocześnie wymusza dokładność: mózg ma tendencję do „domykania” słowa po kształcie i przeoczenia drobnej różnicy — tak powstają błędy przy szybkim czytaniu umów czy liczb.',
+  run(body, signal) {
+    const MAX = 12;
+    const params = (L) => {
+      const rows = 3 + Math.floor((L - 1) / 4);
+      const cells = rows * 3;
+      return { rows, cells, odd: Math.min(Math.floor(cells / 3), 2 + Math.floor(L / 4)), minLen: Math.min(7, 3 + Math.floor(L / 3)) };
+    };
+    const setup = () => body.replaceChildren(
+      levelInfo('niepary', MAX, setup, (L) => { const q = params(L); return `${q.cells} kafelków (3×${q.rows}) · ${q.odd} różnice · słowa od ${q.minLen} liter`; }),
+      startBtn(go), lastResult('niepary'));
+    const go = () => session(body, signal, {
+      id: 'niepary', name: 'Niepasujące pary', unit: 'par', onSetup: setup,
+      level: { key: 'niepary', max: MAX },
+      lines: (x) => [`Ukończone plansze: ${x.boards || 0}`, x.wrong ? `Stuknięte pasujące pary: ${x.wrong}` : ''],
+      start(stage, api) {
+        Object.assign(api.extra, { boards: 0, wrong: 0 });
+        const found = h('b', {}, '0'); const left = h('b', {});
+        const head = h('div', { class: 'np-head' }, h('span', {}, h('small', {}, 'Znaleziono'), found), h('span', {}, h('small', {}, 'Pozostało'), left));
+        const grid = h('div', { class: 'np-grid' });
+        stage.replaceChildren(head, grid, h('p', { class: 'muted small center-text' }, 'Znajdź niepasujące pary'));
+        let total = 0;
+        const board = () => {
+          const p = params(api.level);
+          const pool = shuffle(WORDS.filter((w) => [...w].length >= p.minLen));
+          const words = pool.slice(0, p.cells);
+          const oddIdx = new Set(shuffle([...words.keys()]).slice(0, p.odd));
+          let remaining = p.odd; left.textContent = remaining;
+          grid.replaceChildren(...words.map((w, i) => {
+            const odd = oddIdx.has(i); const b2 = odd ? mutate(w) : w;
+            return h('button', { class: 'np-tile', onpointerdown: (e) => {
+              e.preventDefault();
+              const el = e.currentTarget;
+              if (!api.alive || el.classList.contains('found')) return;
+              if (odd) {
+                el.classList.add('found'); total++; found.textContent = total; remaining--; left.textContent = remaining;
+                api.answer(true);
+                if (!remaining) { api.extra.boards++; setTimeout(() => api.alive && board(), 350); }
+              } else { api.extra.wrong++; api.answer(false); shake(el); }
+            } }, h('span', {}, w), h('span', {}, b2));
+          }));
+        };
+        board();
       },
     });
     setup();

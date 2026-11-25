@@ -78,6 +78,30 @@ const TUTORIALS = {
     { title: 'Stuknij, gdy litera się różni', visual: () => sideGrid(h, 'A', 'B'), text: 'Jedna żółta litera to B. Stuknij „Znaleziono różnicę”, gdy cztery żółte litery nie są wszystkie takie same.',
       task: (unlock) => h('button', { class: 'btn big wide side-btn', onclick: (e) => { e.currentTarget.disabled = true; e.currentTarget.textContent = '✓ Znaleziono różnicę'; unlock(); } }, 'Znaleziono różnicę') },
   ],
+  niepary: (h) => {
+    const tile = (a, b, cls = '') => h('div', { class: `np-tile static ${cls}` }, h('span', {}, a), h('span', {}, b));
+    return [
+      { title: 'Pary słów w kafelkach', visual: () => h('div', { class: 'np-grid tut-np' }, tile('ogród', 'ogród'), tile('rynek', 'rynek'), tile('kapitał', 'kapitał'), tile('umowa', 'umowa'), tile('koszt', 'kosz'), tile('lampa', 'lampa')),
+        text: 'Każdy kafelek ma dwa słowa. Większość par jest identyczna — kilka różni się jedną literą lub kolejnością.' },
+      { title: 'Nie stukaj pasujących par', visual: () => h('div', { class: 'np-grid tut-np two' }, tile('garden', 'garden'), tile('sklep', 'sklep')),
+        text: 'Pasująca para to błąd. Stukaj tylko te, w których słowa się różnią. „Pozostało” pokazuje, ile różnic zostało na planszy.' },
+      { title: 'Znajdź różniącą się parę', text: 'Stuknij kafelek, którego dwa słowa się różnią. Nie stukaj pasującej pary.', task: (unlock) => {
+        const msg = h('div', { class: 'tut-feedback' }); const again = h('button', { class: 'btn tut-again', hidden: true }, 'Spróbuj ponownie');
+        const wrap = h('div', { class: 'np-grid tut-np two' });
+        const reset = () => { msg.replaceChildren(); again.hidden = true; wrap.querySelectorAll('.np-tile').forEach((t) => t.classList.remove('found')); };
+        const mk = (a, b, odd) => h('button', { class: 'np-tile', onclick: (e) => {
+          if (odd) {
+            e.currentTarget.classList.add('found');
+            msg.replaceChildren(h('span', { class: 'ok-ico' }, '✓'), h('span', {}, `Zgadza się — ${a} i ${b} to różne słowa. W ćwiczeniu stukaj tylko pary, które się różnią.`));
+            again.hidden = false; unlock();
+          } else { shake(e.currentTarget); msg.replaceChildren(h('span', { class: 'bad-ico' }, '✕'), h('span', {}, 'To ta sama para — szukaj kafelka, w którym słowa się różnią.')); }
+        } }, h('span', {}, a), h('span', {}, b));
+        wrap.append(mk('ogród', 'ogród', false), mk('forma', 'froma', true));
+        again.addEventListener('click', reset);
+        return h('div', { class: 'tut-np-task' }, wrap, msg, again);
+      } },
+    ];
+  },
   schulte: (h) => {
     const nums = [7, 2, 9, 4, 1, 6, 3, 8, 5];
     const g = (hit = []) => grid(h, nums.map((v, i) => h('span', { class: hit.includes(v) ? 'hit' : '' }, i === 4 ? h('i', { class: 'tut-dot' }, v) : v)), 3);
