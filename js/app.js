@@ -159,8 +159,10 @@ const Infopigula = {
 
 /* ---------- Plan dnia ---------- */
 const DEFAULT_PLAN = ['oczy', 'schulte', 'sfera', 'linia', 'rsvp'];
-const getPlan = () => Store.pref('plan', DEFAULT_PLAN).filter((id) => EXERCISES.some((e) => e.id === id));
-const setPlan = (ids) => Store.setPref('plan', EXERCISES.map((e) => e.id).filter((id) => ids.includes(id)));
+// Ruch oczu to rozgrzewka — zawsze pierwszy w planie dnia, niezależnie od wyboru.
+const FIRST_IN_PLAN = 'oczy';
+const getPlan = () => [FIRST_IN_PLAN, ...Store.pref('plan', DEFAULT_PLAN).filter((id) => id !== FIRST_IN_PLAN && EXERCISES.some((e) => e.id === id))];
+const setPlan = (ids) => Store.setPref('plan', [FIRST_IN_PLAN, ...EXERCISES.map((e) => e.id).filter((id) => id !== FIRST_IN_PLAN && ids.includes(id))]);
 let currentEx = null; // id otwartego ćwiczenia (do przycisku „Następnie”)
 
 /* ---------- Wspólne elementy UI ---------- */
@@ -1210,7 +1212,11 @@ function planSection() {
   };
   const edit = () => {
     const sel = new Set(getPlan());
-    const list = h('div', { class: 'plan-edit' }, ...EXERCISES.map((e) => {
+    const ordered = [EXERCISES.find((e) => e.id === FIRST_IN_PLAN), ...EXERCISES.filter((e) => e.id !== FIRST_IN_PLAN)];
+    const list = h('div', { class: 'plan-edit' }, ...ordered.map((e) => {
+      if (e.id === FIRST_IN_PLAN) {
+        return h('div', { class: 'pick on locked' }, h('span', { class: 'box' }), h('span', { class: 'ico' }, e.icon), h('span', {}, e.name), h('small', { class: 'muted' }, 'zawsze pierwsze'));
+      }
       const row = h('button', {
         class: 'pick' + (sel.has(e.id) ? ' on' : ''), onclick: () => {
           if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id);

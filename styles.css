@@ -707,3 +707,5 @@ html.standalone { --safari-bar: 0px; }
 .tut-words span { border-radius: 4px; cursor: pointer; }
 .tut-words span.hit { background: rgba(250, 204, 21, .45); }
 .tut-open { display: block; margin: 6px auto 0; font-size: 14px; }
+.pick.locked { cursor: default; opacity: .85; }
+.pick.locked small { margin-left: auto; }
