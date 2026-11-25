@@ -709,3 +709,7 @@ html.standalone { --safari-bar: 0px; }
 .tut-open { display: block; margin: 6px auto 0; font-size: 14px; }
 .pick.locked { cursor: default; opacity: .85; }
 .pick.locked small { margin-left: auto; }
+
+/* Schulte: mała kropka w środku tablicy, nad cyframi (mniejsza niż wcześniej: 4 px) */
+.schulte .focus-dot { z-index: 2; width: 4px !important; height: 4px !important; margin: -2px !important; opacity: 1 !important;
+  box-shadow: 0 0 0 1.5px var(--surface) !important; }

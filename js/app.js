@@ -512,6 +512,7 @@ ex({
   why: 'Ostro widzisz tylko mały obszar wokół punktu fiksacji. Tablica zmusza mózg do analizowania obrazu poza nim. Szersze „pole użyteczne” oznacza mniej fiksacji na linijkę, a więc szybsze czytanie.',
   run(body, signal) {
     let size = Store.pref('schulteSize', 5);
+    if (!Store.pref('schulteDotRestored', false)) { Store.setPref('schulteDot', true); Store.setPref('schulteDotRestored', true); }
     let dot = Store.pref('schulteDot', true);
     let mark = Store.pref('schulteMark', false);
     const setup = () => body.replaceChildren(
@@ -532,7 +533,7 @@ ex({
           const upd = () => status.replaceChildren(h('span', {}, 'Szukaj: ', h('b', {}, next)), h('span', { class: 'muted' }, `Tablice: ${api.extra.tables}`));
           const grid = h('div', { class: 'schulte', style: `--n:${size}` },
             ...shuffle(Array.from({ length: n }, (_, i) => i + 1)).map((v, idx) => h('button', {
-              class: 'cell' + (dot && size % 2 && idx === (n - 1) / 2 ? ' center-cell' : ''), onpointerdown: (e) => {
+              class: 'cell', onpointerdown: (e) => {
                 if (!api.alive) return;
                 if (v === next) {
                   if (mark) e.currentTarget.classList.add('found');
@@ -541,7 +542,7 @@ ex({
                 } else { api.extra.errors++; shake(e.currentTarget); }
               },
             }, v)),
-            dot && size % 2 === 0 ? h('div', { class: 'focus-dot' }) : null);
+            dot ? h('div', { class: 'focus-dot' }) : null);
           upd(); stage.replaceChildren(status, grid);
         };
         table();
