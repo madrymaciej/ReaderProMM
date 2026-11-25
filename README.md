@@ -17,7 +17,7 @@ Aplikacja działa też w **widoku poziomym** (iPhone obrócony): sterowanie po l
 | Pole widzenia | **Widzenie boczne** | trafne decyzje: stuknij, gdy 4 żółte litery na brzegach siatki nie są takie same; czekaj, gdy są |
 | Pole widzenia | **Macierz liter** (jak w ReaderPro) | trafnie ocenione zestawy: wszystkie litery takie same czy jedna inna; zestawy lecą w stałym rytmie bez czekania |
 | Pole widzenia | Pary słów | trafienia (takie same / różne słowa po obu stronach osi) |
-| Tempo | Biegające słowa (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst; koniec tekstu kończy ćwiczenie |
+| Tempo | Czytanie w miejscu (RSVP) | przeczytane słowa; tempo rośnie co 10 s, własny tekst; koniec tekstu kończy ćwiczenie |
 | Tempo | Ruch oczu | skoki wzroku (5 wzorów); pełny ekran w poziomie (przy pionowym telefonie obraz obrócony o 90°) |
 | Uwaga i pamięć | Szukanie liter | znalezione litery |
 | Uwaga i pamięć | Szukanie liczb | znalezione liczby |
@@ -35,7 +35,7 @@ Wyniki zapisują się lokalnie na urządzeniu.
 **Poziomy** (widzenie sferyczne, widzenie boczne, macierz liter, pary słów, szukanie liter i liczb, zapamiętaj liczbę):
 3 poprawne odpowiedzi z rzędu = poziom +1, każdy błąd = poziom −1 (reguła schodkowa Levitta „3-down/1-up”,
 skuteczność ok. 79%). Poziom jest zapamiętywany i kolejna sesja startuje od niego. Aktualny poziom widać na górze ekranu.
-Biegające słowa przyspieszają automatycznie co 10 s (+10/+25/+50 sł/min do wyboru).
+Czytanie w miejscu przyspiesza automatycznie co 10 s (+10/+25/+50 sł/min do wyboru).
 
 Propozycje dalszego rozwoju (przegląd aplikacji rynkowych): [docs/PROPOZYCJE.md](docs/PROPOZYCJE.md).
 
@@ -61,7 +61,7 @@ import ze strony po adresie URL (blokada CORS), Instapaper/Pocket, przypomnienia
 
 ## Infopiguła z Gmaila
 
-Codzienne wydanie prasówki trafia do Biegających słów i Biblioteki przez Twój skrypt Apps Script — instrukcja: [docs/INFOPIGULA.md](docs/INFOPIGULA.md).
+Codzienne wydanie prasówki trafia do Czytania w miejscu i Biblioteki przez Twój skrypt Apps Script — instrukcja: [docs/INFOPIGULA.md](docs/INFOPIGULA.md).
 
 ## Aplikacja natywna iOS (menu „Udostępnij”)
 

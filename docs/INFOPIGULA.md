@@ -1,4 +1,4 @@
-# Infopiguła z Gmaila → Biegające słowa i Biblioteka
+# Infopiguła z Gmaila → Czytanie w miejscu i Biblioteka
 
 Codzienne wydanie newslettera Infopiguła (od `newsletter@infopigula.pl`) trafia do aplikacji
 **bezpośrednio z Twojego konta Google** — przez mały skrypt Google Apps Script działający na Twoim koncie.
@@ -19,7 +19,7 @@ a w mailu jest też Twój osobisty link do wypisania się — aplikacja go usuwa
 
 ## Jak działa w aplikacji
 - Raz dziennie (przy otwarciu aplikacji) pobiera najnowsze wydanie i dodaje je do **Biblioteki** jako „Infopiguła DD.MM.RRRR”.
-- W **Biegających słowach** pojawia się tekst **📰 Infopiguła (dziś)**. Wydanie jest dłuższe niż minuta czytania,
+- W **Czytaniu w miejscu** pojawia się tekst **📰 Infopiguła (dziś)**. Wydanie jest dłuższe niż minuta czytania,
   więc każda kolejna sesja **wznawia od miejsca, w którym skończyłeś**; po przeczytaniu całości zaczyna od początku.
 - Z tekstu usuwane są: linki i źródła, nagłówek, stopka, sekcja „Twórcy”, link do wypisania się,
   dopiski „(2 źródła)”, oraz newsy oznaczone jako „brutalne treści”.

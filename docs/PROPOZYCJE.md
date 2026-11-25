@@ -8,7 +8,7 @@ otwarcia stron, więc to poziom „opis w sklepie”). Wysiłek: S = godziny, M 
 | # | Propozycja | Co daje | Kto ma | Wysiłek |
 |---|---|---|---|---|
 | 1 | Test startowy + cel | Pierwszy pomiar tempa i zrozumienia, ustawienie celu (np. 400 sł/min) i plan dnia dobrany do wyniku | Acceleread, Reading Trainer | S–M |
-| 2 | Nawigacja w Biegających słowach | Cofnij o zdanie / akapit, suwak pozycji (recenzenci narzekają na brak w czytnikach Spritz) | luka w ReadOwl | S |
+| 2 | Nawigacja w Czytaniu w miejscu | Cofnij o zdanie / akapit, suwak pozycji (recenzenci narzekają na brak w czytnikach Spritz) | luka w ReadOwl | S |
 | 3 | Warianty tablicy Schulte’a | „Shift” (tasowanie po każdym trafieniu), litery zamiast cyfr, obrócone znaki | aplikacje Schulte | S |
 | 4 | Pacer na zwykłym tekście | Podświetlenie przesuwa się po akapicie w zadanym tempie — trening w naturalnym układzie strony | Outread (Guide), SwiftRead | M |
 | 5 | Dźwięk zamiast wibracji | iOS Safari nie obsługuje wibracji z poziomu strony — krótki dźwięk trafienia/błędu (z wyłącznikiem) | aplikacje Schulte | S |
@@ -18,11 +18,11 @@ otwarcia stron, więc to poziom „opis w sklepie”). Wysiłek: S = godziny, M 
 
 | # | Propozycja | Co daje | Kto ma | Wysiłek |
 |---|---|---|---|---|
-| 7 | Import TXT / EPUB | Własne książki w Biegających słowach i pacerze | Outread, SwiftRead, Reedy, Spreeder | M |
+| 7 | Import TXT / EPUB | Własne książki w Czytaniu w miejscu i pacerze | Outread, SwiftRead, Reedy, Spreeder | M |
 | 8 | Import PDF | Raporty, umowy, analizy (pdf.js) | Outread, SwiftRead, Spreeder | M |
 | 9 | Biblioteka z zapamiętaną pozycją | Lista tekstów, wznowienie od miejsca przerwania | Spreeder, Readsy, Reedy | S–M |
 | 10 | Więcej polskich tekstów z pytaniami | Stopniowane teksty (np. domena publiczna z Wolnych Lektur) — więcej testów bez powtórek | 7 Speed Reading, Spreeder | M (treść) |
-| 11 | RSVP z rosnącym tempem + pytania | Biegające słowa kończone pytaniami o zrozumienie | Elevate („Processing”) | S |
+| 11 | RSVP z rosnącym tempem + pytania | Czytanie w miejscu kończone pytaniami o zrozumienie | Elevate („Processing”) | S |
 
 ## Priorytet 3 — program i motywacja
 

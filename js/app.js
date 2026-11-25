@@ -798,9 +798,9 @@ ex({
   },
 });
 
-/* ---------- 4. Biegające słowa (RSVP) ---------- */
+/* ---------- 4. Czytanie w miejscu (RSVP) ---------- */
 ex({
-  id: 'rsvp', group: 'Tempo', icon: '▶', name: 'Biegające słowa',
+  id: 'rsvp', group: 'Tempo', icon: '▶', name: 'Czytanie w miejscu',
   short: 'Czytaj słowo po słowie, tempo rośnie w trakcie',
   how: 'Patrz na czerwoną literę — słowa zmieniają się w tym samym miejscu. Ustaw tempo startowe, przy którym rozumiesz tekst. W trakcie sesji tempo rośnie automatycznie co 10 s (możesz też poprawić je ręcznie przyciskami − / +). Możesz wkleić własny tekst, np. artykuł.',
   score: 'Liczba słów przeczytanych w 1 minutę. Dodatkowo: tempo końcowe, do którego doszedłeś.',
@@ -854,7 +854,7 @@ ex({
       } else words = tokenize(getText());
       if (words.length < 5) { alert('Tekst jest za krótki.'); return; }
       session(body, signal, {
-        id: 'rsvp', name: 'Biegające słowa', unit: 'słów', onSetup: setup,
+        id: 'rsvp', name: 'Czytanie w miejscu', unit: 'słów', onSetup: setup,
         lines: (x) => [
           ip ? (x.textDone ? `Infopiguła ${ip.issue} przeczytana do końca ✓` : `Infopiguła ${ip.issue}: przeczytano do słowa ${startW + (x.shown || 0)} z ${startW + words.length} — następna sesja wznowi od tego miejsca`) : '',
           !ip && x.textDone ? `Tekst przeczytany w całości w ${Math.round(x.seconds)} s → średnio ${Math.round((words.length / Math.max(1, x.seconds)) * 60)} sł/min` : '',
@@ -1357,11 +1357,11 @@ function infopigulaSettings() {
     Store.setPref('infopigulaUrl', input.value.trim());
     if (!input.value.trim()) { status.textContent = 'Odłączono.'; return; }
     status.textContent = 'Łączenie…';
-    try { const r = await Infopigula.latest(true); status.textContent = `✓ Działa: wydanie ${r.issue}, ${r.count} wiadomości — dodane do Biblioteki i do Biegających słów.`; } catch (e) { status.textContent = `✗ ${e.message}`; }
+    try { const r = await Infopigula.latest(true); status.textContent = `✓ Działa: wydanie ${r.issue}, ${r.count} wiadomości — dodane do Biblioteki i do Czytania w miejscu.`; } catch (e) { status.textContent = `✗ ${e.message}`; }
   };
   return h('section', { class: 'plan' },
     h('h2', { class: 'set-h' }, '📰 Infopiguła z Gmaila'),
-    h('p', { class: 'muted small' }, 'Codzienne wydanie trafia do Biegających słów i do Biblioteki. Adres skryptu Apps Script z Twojego konta Google — instrukcja w repozytorium: docs/INFOPIGULA.md.'),
+    h('p', { class: 'muted small' }, 'Codzienne wydanie trafia do Czytania w miejscu i do Biblioteki. Adres skryptu Apps Script z Twojego konta Google — instrukcja w repozytorium: docs/INFOPIGULA.md.'),
     input,
     h('button', { class: 'btn wide', onclick: test }, 'Zapisz i sprawdź połączenie'),
     status);
@@ -1447,6 +1447,7 @@ document.documentElement.classList.toggle('standalone', isStandalone);
 Store.load();
 // Zmiana nazw ćwiczeń (XI 2026): „Linia wzroku” → „Pary słów”; dawne ćwiczenie „Pary słów” usunięte razem z wynikami i poziomem.
 if (Store.data.results.linia) Store.data.results.linia.name = 'Pary słów';
+if (Store.data.results.rsvp) Store.data.results.rsvp.name = 'Czytanie w miejscu'; // dawniej „Biegające słowa”
 if (Store.data.results.pary || 'lvl-pary' in Store.data.prefs) {
   delete Store.data.results.pary; delete Store.data.prefs['lvl-pary']; delete Store.data.prefs['seen-pary'];
   Store.save();
