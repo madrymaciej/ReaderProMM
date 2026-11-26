@@ -1504,6 +1504,9 @@ const isStandalone = navigator.standalone === true || matchMedia('(display-mode:
 document.documentElement.classList.toggle('standalone', isStandalone);
 
 Store.load();
+// Przy każdym uruchomieniu aplikacji ekran główny otwiera się na zakładce „Plan dnia”
+// (w trakcie korzystania zakładka zostaje zapamiętana, np. po powrocie z ćwiczenia).
+Store.data.prefs.homeTab = 'plan';
 // Zmiana nazw ćwiczeń (XI 2026): „Linia wzroku” → „Pary słów”; dawne ćwiczenie „Pary słów” usunięte razem z wynikami i poziomem.
 if (Store.data.results.linia) Store.data.results.linia.name = 'Pary słów';
 if (Store.data.results.rsvp) Store.data.results.rsvp.name = 'Czytanie w miejscu'; // dawniej „Biegające słowa”
