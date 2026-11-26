@@ -1,6 +1,6 @@
 // Biblioteka dokumentów w IndexedDB (książki mogą mieć kilka MB — localStorage na to za mały).
 
-const DB_NAME = 'readerpromm-library';
+const DB_NAME = 'readerpromm-library'; // nazwa wewnętrzna — nie zmieniać (zmiana skasowałaby bibliotekę)
 const STORE = 'docs';
 let dbp = null;
 

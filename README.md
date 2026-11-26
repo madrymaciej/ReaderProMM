@@ -1,4 +1,4 @@
-# Szybkie czytanie (repozytorium ReaderProMM)
+# SzybkieCzytanie
 
 Aplikacja na iPhone'a z ćwiczeniami szybkiego czytania, wzorowana na zestawie ćwiczeń z wycofanej aplikacji ReaderPro.
 Działa jako **PWA** (Progressive Web App), czyli strona instalowana na ekranie głównym. Uruchamia się na pełnym ekranie i działa offline.
@@ -71,9 +71,9 @@ Kopię danych (wyniki, ustawienia, biblioteka) przeniesiesz przez Ustawienia →
 
 ## Instalacja na iPhonie
 
-1. Otwórz w Safari adres `https://madrymaciej.github.io/ReaderProMM/`.
+1. Otwórz w Safari adres `https://madrymaciej.github.io/SzybkieCzytanie/`.
 2. Stuknij **Udostępnij** → **Do ekranu początkowego** → **Dodaj**.
-3. Uruchamiaj aplikację z ikony **ReaderProMM**.
+3. Uruchamiaj aplikację z ikony **Szybkie czytanie**.
 
 ## Rozwój
 

@@ -52,7 +52,7 @@ const flash = (el, good) => {
 
 /* ---------- Pamięć wyników (lokalnie na urządzeniu) ---------- */
 const Store = {
-  key: 'readerpromm-v2',
+  key: 'readerpromm-v2', // nazwa wewnętrzna — nie zmieniać (zmiana skasowałaby zapisane dane)
   data: { results: {}, days: [], prefs: {} },
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(this.key)) || {}); } catch { /* brak dostępu */ }

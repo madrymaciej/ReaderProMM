@@ -1,7 +1,7 @@
 # Aplikacja natywna iOS „Szybkie czytanie” (z rozszerzeniem „Udostępnij”)
 
 ## Jak to działa
-- **Aplikacja** (`ios/App`) wyświetla aplikację webową z https://madrymaciej.github.io/ReaderProMM/ w WKWebView
+- **Aplikacja** (`ios/App`) wyświetla aplikację webową z https://madrymaciej.github.io/SzybkieCzytanie/ w WKWebView
   (te same ćwiczenia i czytnik; aktualizacje przychodzą same, działa offline dzięki service workerowi).
 - **Rozszerzenie „Udostępnij”** (`ios/ShareExtension`) pojawia się w menu Udostępnij:
   - z **Safari** — `GetArticle.js` wyciąga sam artykuł z otwartej strony (także po zalogowaniu; zaznaczony fragment ma pierwszeństwo),
@@ -17,7 +17,7 @@
 3. W Terminalu:
    ```bash
    brew install xcodegen
-   git clone https://github.com/madrymaciej/ReaderProMM.git && cd ReaderProMM/ios && xcodegen generate && open SzybkieCzytanie.xcodeproj
+   git clone https://github.com/madrymaciej/SzybkieCzytanie.git && cd SzybkieCzytanie/ios && xcodegen generate && open SzybkieCzytanie.xcodeproj
    ```
 4. W Xcode, dla **obu** celów (SzybkieCzytanie i ShareExtension) → *Signing & Capabilities* → **Team**: Twoje konto.
    Xcode sam zarejestruje identyfikatory i App Group.

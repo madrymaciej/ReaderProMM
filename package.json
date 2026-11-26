@@ -1,9 +1,9 @@
 {
-  "name": "readerpromm",
+  "name": "szybkieczytanie",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "ReaderProMM — ćwiczenia szybkiego czytania (PWA na iPhone)",
+  "description": "SzybkieCzytanie — ćwiczenia szybkiego czytania (PWA na iPhone)",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "python3 -m http.server 8080"

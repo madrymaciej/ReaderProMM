@@ -5,7 +5,7 @@ import WebKit
 /// przekazywanie tekstów z rozszerzenia „Udostępnij”, blokada wygaszania ekranu, eksport kopii danych.
 final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     static let appHost = "madrymaciej.github.io"
-    static let appURL = URL(string: "https://madrymaciej.github.io/ReaderProMM/")!
+    static let appURL = URL(string: "https://madrymaciej.github.io/SzybkieCzytanie/")!
 
     private var webView: WKWebView!
     private var pageLoaded = false

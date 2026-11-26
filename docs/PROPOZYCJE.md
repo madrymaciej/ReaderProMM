@@ -1,4 +1,4 @@
-# Propozycje usprawnień ReaderProMM — przegląd aplikacji rynkowych (XI 2026)
+# Propozycje usprawnień SzybkieCzytanie — przegląd aplikacji rynkowych (XI 2026)
 
 Źródła: opisy w App Store / Chrome Web Store / Microsoft Store i recenzje (przez wyszukiwarkę — bez bezpośredniego
 otwarcia stron, więc to poziom „opis w sklepie”). Wysiłek: S = godziny, M = dzień, L = kilka dni / głównie treść.
@@ -38,7 +38,7 @@ otwarcia stron, więc to poziom „opis w sklepie”). Wysiłek: S = godziny, M 
 
 Pominięte jako niepasujące do aplikacji offline: synchronizacja w chmurze, rankingi, integracje Pocket/Instapaper/Kindle.
 
-## Już jest w ReaderProMM
+## Już jest w SzybkieCzytanie
 Wyświetlanie 2–3 słów naraz (odpowiednik „Flash Mode” w Outread), przyspieszanie tempa, własny tekst, poziomy adaptacyjne,
 plan dnia, licznik dni, wykresy, tryb offline.
 
