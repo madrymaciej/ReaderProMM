@@ -31,7 +31,7 @@ Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pami
 
 **Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Następnie: … →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
-Wyniki zapisują się lokalnie na urządzeniu.
+Wyniki zapisują się lokalnie na urządzeniu, a po zalogowaniu synchronizują się między iPhone'em (aplikacja) i PWA — zob. niżej.
 
 **Poziomy** (widzenie sferyczne, widzenie boczne, macierz liter, pary słów, szukanie liter i liczb, zapamiętaj liczbę):
 3 poprawne odpowiedzi z rzędu = poziom +1, każdy błąd = poziom −1 (reguła schodkowa Levitta „3-down/1-up”,
@@ -57,8 +57,15 @@ Do testów czas sesji można skrócić parametrem `?t=5` (sekundy).
 | Wygląd z podglądem na żywo | motywy (Auto, Jasny, Sepia, Szary, Ciemny, Czarny OLED), 4 czcionki, rozmiar, interlinia, 5 kolorów znacznika, pauzy na interpunkcji |
 | Statystyki czytania | słowa i czas dziś / łącznie, średnie tempo, wykres 14 dni |
 
-Bez odpowiedników (wymagałyby serwera lub natywnej aplikacji): synchronizacja między urządzeniami, rozszerzenie „Udostępnij” w Safari,
+Bez odpowiedników (wymagałyby serwera lub natywnej aplikacji): rozszerzenie „Udostępnij” w Safari (jest w aplikacji iOS),
 import ze strony po adresie URL (blokada CORS), Instapaper/Pocket, przypomnienia push. Artykuły: Safari → widok Czytnik → kopiuj → „Wklej tekst”.
+
+## Synchronizacja (Supabase)
+
+Ustawienia → **☁️ Synchronizacja** → e-mail + hasło. Wyniki z obu urządzeń się sumują; poziomy, plan dnia, ustawienia
+i pozycja w książkach — wygrywa najnowsza zmiana. Działa offline (kolejka wysyłki) i prawie na żywo (Realtime).
+Dane chroni logowanie + RLS (wiersz widzi tylko właściciel); w aplikacji jest tylko klucz publiczny.
+Konfiguracja projektu, zasady łączenia i limity planu Free: [docs/SYNC.md](docs/SYNC.md).
 
 ## Infopiguła z Gmaila
 
@@ -86,3 +93,4 @@ Każdy push na `main` uruchamia testy i publikuje stronę na GitHub Pages (`.git
 Po zmianach podbij `VERSION` w `sw.js`, żeby iPhone pobrał nową wersję.
 
 Struktura: `js/lib.js` zawiera czystą logikę (testowaną), `js/app.js` ekrany i ćwiczenia, a `js/texts.js` teksty treningowe.
+Synchronizacja: `js/sync.js` (sieć, kolejka, Realtime), `js/syncmerge.js` (zasady łączenia, testowane), `js/config.js` (adres i klucz publiczny), SQL w `supabase/migrations/`.

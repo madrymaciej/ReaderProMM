@@ -10,6 +10,7 @@ import { articleFromHtml } from './article.js';
 import { parseInfopigula } from './infopigula.js';
 import { makeDemo } from './demos.js';
 import { openTutorial } from './tutorials.js';
+import { createSync } from './sync.js';
 
 /** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
 const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
@@ -54,13 +55,15 @@ const flash = (el, good) => {
 const Store = {
   key: 'readerpromm-v2', // nazwa wewnętrzna — nie zmieniać (zmiana skasowałaby zapisane dane)
   data: { results: {}, days: [], prefs: {} },
+  sync: null, // podpinane niżej (js/sync.js) — dosyła zmiany do chmury
   load() {
     try { Object.assign(this.data, JSON.parse(localStorage.getItem(this.key)) || {}); } catch { /* brak dostępu */ }
     return this;
   },
   save() { try { localStorage.setItem(this.key, JSON.stringify(this.data)); } catch { /* brak dostępu */ } },
   pref(k, def) { return this.data.prefs[k] ?? def; },
-  setPref(k, v) { this.data.prefs[k] = v; this.save(); },
+  setPref(k, v) { this.data.prefs[k] = v; this.sync?.queuePref(k, v); this.save(); },
+  delPref(k) { delete this.data.prefs[k]; this.sync?.queuePref(k, null, true); this.save(); },
   get(id) { return this.data.results[id]; },
   record(id, value, { name, unit }, extra = {}) {
     const r = (this.data.results[id] ||= { history: [], best: null });
@@ -73,6 +76,7 @@ const Store = {
     if (r.history.length > 200) r.history.shift();
     const today = dayKey();
     if (!this.data.days.includes(today)) this.data.days.push(today);
+    this.sync?.queueResult(id, r.history[r.history.length - 1], r);
     this.save();
     return { t, isBest: isBest && r.history.length > 1, best: r.best, prev, history: r.history };
   },
@@ -80,6 +84,8 @@ const Store = {
   unrecord(id, t) {
     const r = this.data.results[id];
     if (!r) return;
+    const gone = r.history.find((e) => e.t === t);
+    if (gone) this.sync?.queueResult(id, gone, r, true);
     r.history = r.history.filter((e) => e.t !== t);
     if (!r.history.length) delete this.data.results[id];
     else r.best = Math.max(...r.history.map((e) => e.v));
@@ -149,10 +155,12 @@ const Infopigula = {
     const out = { day: dayKey(), id: it.id, issue: parsed.issue || it.date, title: parsed.title, text: parsed.text, count: parsed.count };
     Store.setPref('ipCache', out);
     const inLib = Store.pref('ipLib', {});
-    if (!inLib[it.id]) {
-      const d = await Library.add({ title: parsed.title, text: parsed.text, source: 'Infopiguła' });
-      Store.setPref('ipLib', { ...inLib, [it.id]: d.id });
+    // Stałe id z identyfikatora maila: to samo wydanie pobrane na iPhonie i w PWA to jeden dokument po synchronizacji.
+    const docId = `ip-${String(it.id).replace(/[^\w-]/g, '').slice(0, 60)}`;
+    if (!inLib[it.id] && !(await Library.get(docId))) {
+      await Library.add({ title: parsed.title, text: parsed.text, source: 'Infopiguła', id: docId });
     }
+    if (!inLib[it.id]) Store.setPref('ipLib', { ...inLib, [it.id]: docId });
     return out;
   },
 };
@@ -1405,6 +1413,8 @@ const importInput = h('input', { type: 'file', accept: '.json,application/json',
     Store.data = { results: {}, days: [], prefs: {}, ...data.store }; Store.save();
     const have = new Set((await Library.list()).map((d) => d.id));
     for (const d of data.docs || []) if (!have.has(d.id)) await Library.put(d);
+    // Import to świadoma decyzja: ustawienia z kopii dostają bieżący czas zmiany, więc wygrywają też w chmurze.
+    if (Sync.status().signedIn) { Store.data.prefTs = {}; await Sync.queueAll(); }
     alert('Dane zaimportowane.'); route();
   } catch (err) { alert(`Import nieudany: ${err.message}`); }
 } });
@@ -1426,6 +1436,39 @@ function infopigulaSettings() {
     status);
 }
 
+function syncSettings() {
+  const sec = h('section', { class: 'plan' });
+  const render = () => {
+    const st = Sync.status();
+    const info = h('p', { class: 'muted small' });
+    const when = st.last ? new Date(st.last).toLocaleString('pl-PL') : 'jeszcze nie';
+    if (!st.configured) {
+      sec.replaceChildren(h('h2', { class: 'set-h' }, '☁️ Synchronizacja'),
+        h('p', { class: 'muted small' }, 'Wyłączona — brak adresu projektu Supabase w js/config.js.'));
+      return;
+    }
+    if (st.signedIn) {
+      info.textContent = `Zalogowano: ${st.email}. Ostatnio: ${when}.`
+        + (st.pending ? ` Czeka na wysłanie: ${st.pending}.` : ' Wszystko wysłane.')
+        + (st.error ? ` ⚠︎ ${st.error}` : '');
+      sec.replaceChildren(h('h2', { class: 'set-h' }, '☁️ Synchronizacja'), info,
+        h('button', { class: 'btn wide', onclick: async (e) => { e.target.disabled = true; await Sync.syncNow(); render(); } }, 'Synchronizuj teraz'),
+        h('button', { class: 'btn wide', onclick: async () => { if (confirm('Wylogować? Dane zostaną na urządzeniu; synchronizacja się zatrzyma.')) { await Sync.signOut(); render(); } } }, 'Wyloguj'));
+      return;
+    }
+    const mail = h('input', { class: 'search', type: 'email', name: 'email', autocomplete: 'username', placeholder: 'E-mail', required: true });
+    const pass = h('input', { class: 'search', type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'Hasło', required: true });
+    info.textContent = st.error ? `✗ ${st.error}` : 'Wyniki, poziomy, plan dnia, ustawienia i biblioteka — wspólne dla iPhone’a (aplikacja) i PWA. Działa też offline: zmiany wyślą się po powrocie sieci.';
+    const form = h('form', { class: 'sync-form', onsubmit: async (e) => {
+      e.preventDefault(); info.textContent = 'Logowanie…';
+      try { await Sync.signIn(mail.value, pass.value); render(); route(); } catch (err) { info.textContent = `✗ ${err.message}`; }
+    } }, mail, pass, h('button', { class: 'btn wide', type: 'submit' }, 'Zaloguj i synchronizuj'));
+    sec.replaceChildren(h('h2', { class: 'set-h' }, '☁️ Synchronizacja'), info, form);
+  };
+  render();
+  return sec;
+}
+
 function settings() {
   const { view, body } = screen('Ustawienia');
   const levelKeys = Object.keys(Store.data.prefs).filter((k) => k.startsWith('lvl-'));
@@ -1433,7 +1476,8 @@ function settings() {
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Trening'),
       h('a', { class: 'btn wide', href: '#/', onclick: () => { Store.setPref('openPlanEdit', true); Store.setPref('homeTab', 'plan'); } }, 'Edytuj plan dnia'),
-      h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => delete Store.data.prefs[k]); Store.save(); route(); } } }, 'Resetuj poziomy do 1')),
+      h('button', { class: 'btn wide', disabled: !levelKeys.length, onclick: () => { if (confirm('Wrócić do poziomu 1 we wszystkich ćwiczeniach?')) { levelKeys.forEach((k) => Store.delPref(k)); route(); } } }, 'Resetuj poziomy do 1')),
+    syncSettings(),
     infopigulaSettings(),
     h('section', { class: 'plan' },
       h('h2', { class: 'set-h' }, 'Dane'),
@@ -1441,8 +1485,13 @@ function settings() {
       h('button', { class: 'btn wide', onclick: exportData }, '⬆︎ Eksportuj kopię danych'),
       h('button', { class: 'btn wide', onclick: () => importInput.click() }, '⬇︎ Importuj kopię danych'),
       importInput,
-      h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Usunąć wszystkie wyniki i ustawienia z tego urządzenia?')) { Store.data = { results: {}, days: [], prefs: {} }; Store.save(); route(); } } }, 'Wyczyść wyniki i ustawienia'),
-      h('p', { class: 'muted small' }, 'Wszystko jest zapisane tylko na tym urządzeniu.')),
+      h('button', { class: 'btn danger wide', onclick: async () => {
+        const cloud = Sync.status().signedIn;
+        if (!confirm(cloud ? 'Usunąć wszystkie wyniki i ustawienia z tego urządzenia I Z CHMURY (znikną też na innych urządzeniach)?' : 'Usunąć wszystkie wyniki i ustawienia z tego urządzenia?')) return;
+        if (cloud) await Sync.wipeAll().catch(() => {});
+        Store.data = { results: {}, days: [], prefs: {}, prefTs: Store.data.prefTs || {} }; Store.save(); route();
+      } }, 'Wyczyść wyniki i ustawienia'),
+      h('p', { class: 'muted small' }, Sync.status().signedIn ? 'Dane są na tym urządzeniu i w chmurze (synchronizacja).' : 'Wszystko jest zapisane tylko na tym urządzeniu.')),
     h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'));
   return view;
 }
@@ -1514,8 +1563,17 @@ if (Store.data.results.pary || 'lvl-pary' in Store.data.prefs) {
   delete Store.data.results.pary; delete Store.data.prefs['lvl-pary']; delete Store.data.prefs['seen-pary'];
   Store.save();
 }
+const Sync = createSync({ Store, Library });
+Store.sync = Sync;
+Library.setOnChange((doc, how) => Sync.queueDoc(doc, { deleted: how === 'remove', text: how === 'put' }));
+// Zmiany z innego urządzenia: odśwież ekran tylko tam, gdzie nie przerwie to ćwiczenia ani czytania.
+Sync.onRemote(() => {
+  const [, kind] = (location.hash || '#/').split('/');
+  if (!kind || kind === 'stats' || kind === 'library') route();
+});
 addEventListener('hashchange', route);
 route();
+Sync.init();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('./sw.js').catch(() => {});

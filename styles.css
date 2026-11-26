@@ -755,3 +755,6 @@ html.standalone { --safari-bar: 0px; }
 .start-name .ico { width: 44px; height: 44px; font-size: 22px; border-radius: 12px; }
 .start-level { padding: 3px 12px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font-weight: 700; font-variant: small-caps; letter-spacing: .5px; }
 .btn.primary.tut-cta:not([disabled]) { background: var(--ok); }
+
+/* Synchronizacja (Ustawienia) */
+.sync-form { display: grid; gap: 8px; margin-top: 8px; }

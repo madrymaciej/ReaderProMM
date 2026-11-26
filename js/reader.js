@@ -5,6 +5,7 @@ import { importFile, ACCEPT, normalizeText } from './importers.js';
 import { buildDoc, paginate, pageOf, sentenceBack, sentenceForward, minutesLeft, formatMinutes } from './textmodel.js';
 import { delayFor, orpIndex, dayKey } from './lib.js';
 import { TEXTS } from './texts.js';
+import { mergeReadDays } from './syncmerge.js';
 
 export const READER_DEFAULTS = {
   mode: 'guide', wpm: 300, guideChunk: 3, flashChunk: 1, punct: true,
@@ -28,10 +29,13 @@ export function createReader({ h, Store, screen, chips, Wake, num }) {
     const day = (s.days[d] ||= { words: 0, secs: 0 });
     day.words += Math.max(0, words); day.secs += Math.max(0, secs);
     if (!Store.data.days.includes(d)) Store.data.days.push(d);
+    Store.sync?.queueRead();
     Store.save();
   }
+  /** Dni czytania z tego urządzenia + z pozostałych (synchronizacja). */
+  const allDays = () => mergeReadDays(stats().days, Store.data.readRemote);
   function statsSummary() {
-    const days = stats().days; const today = days[dayKey()] || { words: 0, secs: 0 };
+    const days = allDays(); const today = days[dayKey()] || { words: 0, secs: 0 };
     let words = 0; let secs = 0;
     for (const v of Object.values(days)) { words += v.words; secs += v.secs; }
     return { today, words, secs, wpm: secs > 30 ? Math.round(words / (secs / 60)) : null };
@@ -39,7 +43,8 @@ export function createReader({ h, Store, screen, chips, Wake, num }) {
   function statsCard() {
     const s = statsSummary();
     const bars = [];
-    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); bars.push({ d, v: stats().days[dayKey(d)]?.words || 0 }); }
+    const days = allDays();
+    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); bars.push({ d, v: days[dayKey(d)]?.words || 0 }); }
     const max = Math.max(1, ...bars.map((b) => b.v));
     return h('section', { class: 'plan read-stats' },
       h('div', { class: 'plan-head' }, h('h2', {}, 'Statystyki czytania')),
