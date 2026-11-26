@@ -56,11 +56,11 @@ final class ShareViewController: UIViewController {
         do {
             let item = try await extractItem()
             try SharedInbox.save(item)
-            await show("Zapisano w Bibliotece ✓\nOtwórz „Szybkie czytanie”, aby czytać.", done: true)
+            show("Zapisano w Bibliotece ✓\nOtwórz „Szybkie czytanie”, aby czytać.", done: true)
             try? await Task.sleep(nanoseconds: 1_300_000_000)
             extensionContext?.completeRequest(returningItems: nil)
         } catch {
-            await show("Nie udało się zapisać.\n\(error.localizedDescription)", done: false)
+            show("Nie udało się zapisać.\n\(error.localizedDescription)", done: false)
             try? await Task.sleep(nanoseconds: 2_800_000_000)
             extensionContext?.cancelRequest(withError: error)
         }
