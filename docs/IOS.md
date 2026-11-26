@@ -19,10 +19,20 @@
    brew install xcodegen
    git clone https://github.com/madrymaciej/SzybkieCzytanie.git && cd SzybkieCzytanie/ios && xcodegen generate && open SzybkieCzytanie.xcodeproj
    ```
-4. W Xcode, dla **obu** celów (SzybkieCzytanie i ShareExtension) → *Signing & Capabilities* → **Team**: Twoje konto.
+4. **Zaloguj Xcode na konto deweloperskie** (jednorazowo na Macu): ⌘, → *Apple Accounts* → **+** / *Sign In…* → Apple ID.
+   Bez tego build kończy się błędami „No Accounts” i „No profiles for 'com.madrymaciej…'”.
+5. W Xcode, dla **obu** celów (SzybkieCzytanie i ShareExtension) → *Signing & Capabilities* →
+   ✓ *Automatically manage signing*, **Team**: Twój zespół (nie „Personal Team”).
    Xcode sam zarejestruje identyfikatory i App Group.
-5. Podłącz iPhone'a kablem (pierwszy raz: na iPhonie *Ustawienia → Prywatność i ochrona → Tryb dewelopera* → włącz, restart).
-6. Wybierz iPhone'a u góry i ▶︎ **Run** (⌘R).
+6. Podłącz iPhone'a kablem, odblokuj, „Ufaj temu komputerowi”, wybierz go u góry okna Xcode.
+7. Status „Device … isn't registered in your developer account” → **Register Device** (jednorazowo na urządzenie).
+8. ▶︎ **Run** (⌘R). Okno pęku kluczy „codesign potrzebuje dostępu do klucza Apple Development…” →
+   hasło do Maca → **Zawsze pozwalaj** (przy „Pozwól” okno wraca przy każdym buildzie).
+9. „Developer Mode disabled” → na iPhonie *Ustawienia → Prywatność i ochrona → Tryb dewelopera* → włącz →
+   restart → potwierdź **Włącz** → ponownie ⌘R. (Opcja pojawia się dopiero po pierwszej próbie instalacji z Xcode.)
+10. Jeśli przy otwieraniu aplikacji pojawi się „Niezaufany deweloper”: *Ustawienia → Ogólne → VPN i urządzenia zarządzane* → Twoje konto → **Ufaj**.
+
+Kroki 4, 7, 8 i 9 robi się raz — przy kolejnych aplikacjach wystarczą kroki 3, 5 i 8 (⌘R).
 
 ## Przeniesienie danych z wersji webowej
 Stara ikona (PWA) → Ustawienia → **Eksportuj kopię danych** → zapisz w Plikach.
