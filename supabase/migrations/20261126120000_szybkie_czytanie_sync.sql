@@ -1,4 +1,4 @@
--- Synchronizacja SzybkieCzytanie — schemat `szybkie_czytanie` w projekcie Supabase „madry-apps”.
+-- Synchronizacja SzybkieCzytanie — schemat `szybkie_czytanie` w projekcie Supabase „MM-apps” (Frankfurt).
 -- Każdy wiersz należy do jednego użytkownika (user_id = auth.uid()); RLS wpuszcza tylko właściciela.
 -- Rola `anon` (klucz publiczny bez logowania) ma dostęp wyłącznie do funkcji ping() — bez żadnych danych.
 

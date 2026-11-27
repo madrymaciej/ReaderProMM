@@ -1,9 +1,10 @@
-// Połączenie z Supabase (projekt „madry-apps”, schemat szybkie_czytanie).
+// Połączenie z Supabase (projekt „MM-apps”, Frankfurt, schemat szybkie_czytanie).
 // Klucz publiczny (sb_publishable_…) może być w repozytorium: dane chroni logowanie + RLS (wiersz widzi tylko właściciel).
 // NIGDY nie wpisuj tu klucza service_role / secret.
-// Puste wartości = synchronizacja wyłączona (aplikacja działa jak dotąd, tylko lokalnie).
+// Aplikacja jest prywatna: przy ustawionym adresie bez zalogowania widać tylko ekran logowania.
+// Puste wartości = synchronizacja i logowanie wyłączone (aplikacja działa tylko lokalnie).
 export const SUPABASE = {
-  url: '',          // np. https://abcdefghijklmnop.supabase.co
-  key: '',          // sb_publishable_…
+  url: 'https://blwrnbzqqhnprriezahy.supabase.co',
+  key: 'sb_publishable_Mp90YBT1elzHwilDzJrDiQ_WHAtAWXj',
   schema: 'szybkie_czytanie',
 };

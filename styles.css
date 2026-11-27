@@ -758,3 +758,4 @@ html.standalone { --safari-bar: 0px; }
 
 /* Synchronizacja (Ustawienia) */
 .sync-form { display: grid; gap: 8px; margin-top: 8px; }
+.login-screen { max-width: 420px; margin: 0 auto; padding-top: 18vh; }

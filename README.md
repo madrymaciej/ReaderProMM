@@ -62,7 +62,8 @@ import ze strony po adresie URL (blokada CORS), Instapaper/Pocket, przypomnienia
 
 ## Synchronizacja (Supabase)
 
-Ustawienia → **☁️ Synchronizacja** → e-mail + hasło. Wyniki z obu urządzeń się sumują; poziomy, plan dnia, ustawienia
+**Aplikacja jest prywatna:** po uruchomieniu ekran logowania (konta zakłada właściciel, rejestracja wyłączona).
+Każda osoba widzi tylko swoje dane. Wyniki z obu urządzeń się sumują; poziomy, plan dnia, ustawienia
 i pozycja w książkach — wygrywa najnowsza zmiana. Działa offline (kolejka wysyłki) i prawie na żywo (Realtime).
 Dane chroni logowanie + RLS (wiersz widzi tylko właściciel); w aplikacji jest tylko klucz publiczny.
 Konfiguracja projektu, zasady łączenia i limity planu Free: [docs/SYNC.md](docs/SYNC.md).

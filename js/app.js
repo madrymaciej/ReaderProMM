@@ -1436,6 +1436,23 @@ function infopigulaSettings() {
     status);
 }
 
+/* ---------- Ekran logowania: aplikacja prywatna (konta zakłada właściciel, rejestracja wyłączona) ---------- */
+function loginView() {
+  const mail = h('input', { class: 'search', type: 'email', name: 'email', autocomplete: 'username', placeholder: 'E-mail', required: true });
+  const pass = h('input', { class: 'search', type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'Hasło', required: true });
+  const info = h('p', { class: 'muted small center-text' }, 'Aplikacja prywatna. Zaloguj się kontem, które dostałeś od właściciela aplikacji.');
+  const btn = h('button', { class: 'btn wide', type: 'submit' }, 'Zaloguj');
+  const form = h('form', { class: 'sync-form', onsubmit: async (e) => {
+    e.preventDefault(); btn.disabled = true; info.textContent = 'Logowanie…';
+    try { await Sync.signIn(mail.value, pass.value); route(); }
+    catch (err) { info.textContent = navigator.onLine === false ? '✗ Brak internetu — do pierwszego logowania potrzebna jest sieć.' : `✗ ${err.message}`; }
+    finally { btn.disabled = false; }
+  } }, mail, pass, btn);
+  return h('div', { class: 'screen' },
+    h('main', { class: 'screen-body login-screen' },
+      h('h1', { class: 'center-text' }, '📖 Szybkie czytanie'), info, form));
+}
+
 function syncSettings() {
   const sec = h('section', { class: 'plan' });
   const render = () => {
@@ -1453,7 +1470,7 @@ function syncSettings() {
         + (st.error ? ` ⚠︎ ${st.error}` : '');
       sec.replaceChildren(h('h2', { class: 'set-h' }, '☁️ Synchronizacja'), info,
         h('button', { class: 'btn wide', onclick: async (e) => { e.target.disabled = true; await Sync.syncNow(); render(); } }, 'Synchronizuj teraz'),
-        h('button', { class: 'btn wide', onclick: async () => { if (confirm('Wylogować? Dane zostaną na urządzeniu; synchronizacja się zatrzyma.')) { await Sync.signOut(); render(); } } }, 'Wyloguj'));
+        h('button', { class: 'btn wide', onclick: async () => { if (confirm('Wylogować? Do korzystania z aplikacji trzeba będzie zalogować się ponownie.')) { await Sync.signOut(); } } }, 'Wyloguj'));
       return;
     }
     const mail = h('input', { class: 'search', type: 'email', name: 'email', autocomplete: 'username', placeholder: 'E-mail', required: true });
@@ -1532,6 +1549,12 @@ function route() {
   currentEx = null; gearAction = null;
   document.querySelectorAll('body > .tut').forEach((t) => t.remove());
   let view;
+  // Bez zalogowania (gdy synchronizacja jest skonfigurowana) aplikacja pokazuje tylko ekran logowania.
+  // Sesja jest pamiętana na urządzeniu, więc po zalogowaniu aplikacja działa także offline.
+  if (Sync.configured && !Sync.hasSession()) {
+    app.replaceChildren(loginView());
+    return;
+  }
   if (kind === 'ex') {
     const e = EXERCISES.find((x) => x.id === id);
     if (!e) { location.hash = '#/'; return; }
@@ -1571,6 +1594,7 @@ Sync.onRemote(() => {
   const [, kind] = (location.hash || '#/').split('/');
   if (!kind || kind === 'stats' || kind === 'library') route();
 });
+Sync.onSignedOut(() => route());   // wylogowanie, usunięte konto, cofnięta sesja → ekran logowania
 addEventListener('hashchange', route);
 route();
 Sync.init();

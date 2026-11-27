@@ -20,7 +20,7 @@ export function createSync({ Store, Library }) {
   const state = load();
   let client = null; let uid = null; let email = ''; let channel = null;
   let flushTimer = null; let busy = null; let lastError = '';
-  const listeners = { status: new Set(), remote: new Set() };
+  const listeners = { status: new Set(), remote: new Set(), signedOut: new Set() };
 
   function load() {
     let s = {};
@@ -271,7 +271,7 @@ export function createSync({ Store, Library }) {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: AUTH_KEY },
     });
     client.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') { uid = null; email = ''; unsubscribe(); emit('status'); }
+      if (event === 'SIGNED_OUT') { uid = null; email = ''; unsubscribe(); emit('status'); emit('signedOut'); }
       else if (session?.user) { uid = session.user.id; email = session.user.email || ''; }
     });
     return client;
@@ -306,15 +306,17 @@ export function createSync({ Store, Library }) {
     await flush().catch(() => {});
     await unsubscribe();
     if (client) await client.auth.signOut({ scope: 'local' });
-    uid = null; email = ''; emit('status');
+    uid = null; email = ''; emit('status'); emit('signedOut');
   }
   async function syncNow() { await flush(); await pull(); }
 
+  /** Czy na urządzeniu jest zapisana sesja (bez sieci) — podstawa ekranu logowania przy starcie. */
+  function hasSession() {
+    try { return !!localStorage.getItem(AUTH_KEY); } catch { return false; }
+  }
+
   async function init() {
-    if (!configured) return;
-    let hasSession = false;
-    try { hasSession = !!localStorage.getItem(AUTH_KEY); } catch { /* brak dostępu */ }
-    if (!hasSession) return;
+    if (!configured || !hasSession()) return;
     try { await ensureClient(); await start(); } catch (err) { lastError = describe(err); emit('status'); }
   }
 
@@ -325,10 +327,11 @@ export function createSync({ Store, Library }) {
   });
 
   return {
-    configured, init, signIn, signOut, syncNow, wipeAll, queueAll, status,
+    configured, init, signIn, signOut, syncNow, wipeAll, queueAll, status, hasSession,
     queuePref, queueResult, queueRead, queueDoc,
     onStatus: (fn) => listeners.status.add(fn),
     onRemote: (fn) => listeners.remote.add(fn),
+    onSignedOut: (fn) => listeners.signedOut.add(fn),
     get device() { return state.device; },
   };
 }
