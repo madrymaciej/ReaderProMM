@@ -10,6 +10,7 @@ import { articleFromHtml } from './article.js';
 import { parseInfopigula } from './infopigula.js';
 import { makeDemo } from './demos.js';
 import { openTutorial } from './tutorials.js';
+import { BUILD, CHANNEL } from './version.js';
 
 /** Most do natywnej aplikacji iOS (WKWebView). W przeglądarce/PWA — brak. */
 const nativeBridge = () => window.webkit?.messageHandlers?.native || null;
@@ -1352,7 +1353,7 @@ function home() {
   show(tab);
   return h('div', { class: 'screen' },
     h('header', { class: 'hero' },
-      h('div', {}, h('h1', {}, 'Szybkie czytanie'), h('p', { class: 'muted' }, 'Trening i czytnik')),
+      h('div', {}, h('h1', {}, 'Szybkie czytanie', CHANNEL === 'test' ? h('span', { class: 'chan-badge' }, 'TEST') : null), h('p', { class: 'muted' }, 'Trening i czytnik')),
       h('div', { class: 'hero-actions' },
         h('a', { class: 'streak', href: '#/stats', 'aria-label': 'Statystyki' }, h('b', {}, s), h('span', {}, s === 1 ? 'dzień' : 'dni')),
         gearBtn(() => { location.hash = '#/settings'; }))),
@@ -1455,7 +1456,8 @@ function settings() {
       importInput,
       h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Usunąć wszystkie wyniki i ustawienia z tego urządzenia?')) { Store.data = { results: {}, days: [], prefs: {} }; Store.save(); route(); } } }, 'Wyczyść wyniki i ustawienia'),
       h('p', { class: 'muted small' }, 'Wszystko jest zapisane tylko na tym urządzeniu.')),
-    h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'));
+    h('p', { class: 'muted small center-text' }, 'Ustawienia konkretnego ćwiczenia: koło zębate na ekranie ćwiczenia.'),
+    h('p', { class: 'muted small center-text' }, `Wersja: ${CHANNEL === 'prod' ? 'aplikacja (PROD)' : 'web (TEST)'} · ${BUILD === '__BUILD__' ? 'lokalna' : BUILD}`));
   return view;
 }
 
@@ -1529,6 +1531,56 @@ if (Store.data.results.pary || 'lvl-pary' in Store.data.prefs) {
 addEventListener('hashchange', route);
 route();
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+/* ---------- Aktualizacje ----------
+ * TEST (web): nowa wersja działa od razu.
+ * PROD (iPhone): nowa wersja pobiera się w tle i czeka. Pasek „Dostępna aktualizacja” pyta, czy zainstalować;
+ * jeśli nie zainstalujesz, instaluje się sama przy pierwszym uruchomieniu po nocy (po 3:00), jak aktualizacje z App Store.
+ * Aktualizacja wymienia wyłącznie pliki aplikacji — wyniki, poziomy, plan i biblioteka zostają nietknięte. */
+const Updates = {
+  reg: null, bar: null,
+  /** Czy od chwili wykrycia aktualizacji minęła godzina 3:00 (noc)? */
+  nightPassed(since) {
+    const d = new Date(since); d.setHours(3, 0, 0, 0);
+    if (d.getTime() <= since) d.setDate(d.getDate() + 1);
+    return Date.now() >= d.getTime();
+  },
+  apply() {
+    const w = Updates.reg?.waiting; if (!w) return;
+    delete Store.data.prefs.updSeen; Store.save();
+    Updates.bar?.remove();
+    w.postMessage('skipWaiting'); // po przejęciu strony przez nową wersję: przeładowanie (controllerchange)
+  },
+  check() {
+    const reg = Updates.reg;
+    if (!reg?.waiting || !navigator.serviceWorker.controller) return;
+    const seen = Store.pref('updSeen', 0) || Date.now();
+    if (!Store.pref('updSeen', 0)) Store.setPref('updSeen', seen);
+    const busy = !!document.querySelector('.in-session');
+    if (!busy && Updates.nightPassed(seen)) { Updates.apply(); return; }
+    if (Updates.bar?.isConnected) return;
+    Updates.bar = h('div', { class: 'update-bar', role: 'status' },
+      h('span', {}, h('b', {}, 'Dostępna aktualizacja'), h('small', {}, 'Zainstaluje się sama w nocy. Twoje wyniki i poziomy zostaną.')),
+      h('button', { class: 'btn primary', onclick: () => Updates.apply() }, 'Zainstaluj'),
+      h('button', { class: 'btn', onclick: () => Updates.bar.remove() }, 'Później'));
+    document.body.append(Updates.bar);
+  },
+  async init() {
+    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    try { Updates.reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }); } catch { return; }
+    if (CHANNEL !== 'prod') return;
+    const reg = Updates.reg;
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w?.addEventListener('statechange', () => { if (w.state === 'installed') Updates.check(); });
+    });
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
+    Updates.check();
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      reg.update().catch(() => {}); Updates.check();
+    });
+  },
+};
+Updates.init();

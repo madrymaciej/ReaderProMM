@@ -1,8 +1,8 @@
 # Aplikacja natywna iOS „Szybkie czytanie” (z rozszerzeniem „Udostępnij”)
 
 ## Jak to działa
-- **Aplikacja** (`ios/App`) wyświetla aplikację webową z https://madrymaciej.github.io/SzybkieCzytanie/ w WKWebView
-  (te same ćwiczenia i czytnik; aktualizacje przychodzą same, działa offline dzięki service workerowi).
+- **Aplikacja** (`ios/App`) wyświetla wydaną wersję (PROD) z https://madrymaciej.github.io/SzybkieCzytanie/prod/ w WKWebView
+  (te same ćwiczenia i czytnik; aktualizacje — patrz „Wersje TEST i PROD” niżej; działa offline dzięki service workerowi).
 - **Rozszerzenie „Udostępnij”** (`ios/ShareExtension`) pojawia się w menu Udostępnij:
   - z **Safari** — `GetArticle.js` wyciąga sam artykuł z otwartej strony (także po zalogowaniu; zaznaczony fragment ma pierwszeństwo),
   - z **innych aplikacji** — link: rozszerzenie pobiera stronę, artykuł wyciąga aplikacja (`js/article.js`),
@@ -40,3 +40,17 @@ Aplikacja natywna → Ustawienia → **Importuj kopię danych**.
 
 ## Automatyczna kontrola
 `.github/workflows/ios.yml` kompiluje projekt na macOS (symulator, bez podpisu) przy każdej zmianie w `ios/`.
+
+## Wersje TEST i PROD, aktualizacje
+| | Adres | Skąd | Kiedy się zmienia |
+|---|---|---|---|
+| **TEST** (web) | https://madrymaciej.github.io/SzybkieCzytanie/ | gałąź `main` | po każdym pushu — od razu |
+| **PROD** (aplikacja na iPhonie) | https://madrymaciej.github.io/SzybkieCzytanie/prod/ | gałąź `prod` | tylko przy wydaniu |
+
+- Każda zmiana trafia najpierw do TEST. Wydanie na iPhone'a (PROD = obecny TEST) uruchamia właściciel:
+  `gh workflow run pages.yml -f release=true` albo GitHub → Actions → „Testy i publikacja…” → Run workflow → ✓ release.
+- Aplikacja pobiera nową wersję w tle i pokazuje pasek **„Dostępna aktualizacja — Zainstaluj / Później”**.
+  Bez zgody instaluje się sama przy pierwszym uruchomieniu po nocy (po 3:00) — jeśli akurat nie trwa ćwiczenie.
+- Aktualizacja wymienia tylko pliki aplikacji. **Dane (wyniki, poziomy, plan, biblioteka) zostają** — są w localStorage/IndexedDB
+  domeny `madrymaciej.github.io`, wspólnej dla obu ścieżek. Nie zmieniać `Store.key` ani `DB_NAME`; migracje danych tylko dodają/zmieniają, nigdy nie kasują.
+- Kod natywny (Swift) zmienia się rzadko; po jego zmianie apkę trzeba ponownie zainstalować z Xcode (⌘R) — dane zostają.

@@ -1,11 +1,21 @@
-name: Testy i publikacja na GitHub Pages
+name: Testy i publikacja na GitHub Pages (TEST + PROD)
+# TEST  = gałąź main  → https://madrymaciej.github.io/SzybkieCzytanie/       (wersja web, każda zmiana od razu)
+# PROD  = gałąź prod  → https://madrymaciej.github.io/SzybkieCzytanie/prod/  (aplikacja na iPhonie)
+# Wydanie na iPhone'a (PROD = obecny TEST): `gh workflow run pages.yml -f release=true`
+#   albo GitHub → Actions → ten workflow → Run workflow → zaznacz „release”.
+#   (Zawsze uruchamiane z main — środowisko github-pages pozwala publikować tylko z main.)
 on:
   push:
     branches: [main]
     paths-ignore: ['ios/**', '.github/workflows/ios.yml']
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Wydaj obecną wersję TEST na iPhone'a (PROD)"
+        type: boolean
+        default: false
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -18,14 +28,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+          fetch-depth: 0
+      - name: Wydanie — gałąź prod = main
+        if: ${{ inputs.release }}
+        run: cd site && git push origin HEAD:refs/heads/prod
+      - uses: actions/checkout@v4
+        with:
+          ref: prod
+          path: prodsrc
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
+      - name: Testy (TEST)
+        run: cd site && npm test
+      - name: Wersja PROD w /prod/
+        run: |
+          mkdir -p site/prod
+          rsync -a --exclude .git --exclude .github --exclude ios --exclude tests --exclude tools --exclude docs prodsrc/ site/prod/
+      - name: Numery wydań (zmiana sw.js = przeglądarka widzi nową wersję)
+        run: |
+          stamp() { # $1 = katalog, $2 = repozytorium
+            local b="$(git -C "$2" log -1 --format=%cd --date=format:%Y-%m-%d)·$(git -C "$2" rev-parse --short HEAD)"
+            sed -i "s/__BUILD__/$b/" "$1/sw.js"
+            [ -f "$1/js/version.js" ] && sed -i "s/__BUILD__/$b/" "$1/js/version.js" || true
+          }
+          stamp site site
+          stamp site/prod prodsrc
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: site
   deploy:
     needs: build
     runs-on: ubuntu-latest
