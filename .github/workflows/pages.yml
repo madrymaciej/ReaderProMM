@@ -34,7 +34,8 @@ jobs:
           fetch-depth: 0
       - name: Wydanie — gałąź prod = main
         if: ${{ inputs.release }}
-        run: cd site && git push origin HEAD:refs/heads/prod
+        # prod to tylko migawka main — nadpisujemy ją w całości
+        run: cd site && git push --force origin HEAD:refs/heads/prod
       - uses: actions/checkout@v4
         with:
           ref: prod

@@ -29,7 +29,7 @@ Każde ćwiczenie ma **samouczek** (3 kroki z próbą na przykładzie) — otwie
 
 Ekran główny ma zakładki **Plan dnia / Ćwiczenia / Czytnik** (aplikacja pamięta ostatnio wybraną).
 
-**Plan dnia** — wybierasz ćwiczenia na dany dzień („Edytuj”), aplikacja prowadzi przez nie po kolei („Następnie: … →”).
+**Plan dnia** — codziennie losowany: Ruch oczu (rozgrzewka) zawsze pierwszy, potem ćwiczenia wylosowane z puli („Edytuj”: z jakich i ile), w miarę możliwości inne niż wczoraj. Na ekranie ćwiczenia z planu „⇄ Zmień ćwiczenie” wymienia je na inne. Aplikacja prowadzi przez plan po kolei („Następnie: … →”).
 Pod planem jest pełna lista ćwiczeń. Statystyki: licznik dni z rzędu, rekordy, wykres każdego ćwiczenia.
 Wyniki zapisują się lokalnie na urządzeniu.
 

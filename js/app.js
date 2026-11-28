@@ -159,11 +159,49 @@ const Infopigula = {
 };
 
 /* ---------- Plan dnia ---------- */
-const DEFAULT_PLAN = ['oczy', 'schulte', 'sfera', 'linia', 'rsvp'];
-// Ruch oczu to rozgrzewka — zawsze pierwszy w planie dnia, niezależnie od wyboru.
+// Plan losowany na każdy dzień: Ruch oczu (rozgrzewka) zawsze pierwszy, potem N ćwiczeń wylosowanych z puli,
+// w miarę możliwości innych niż wczoraj. Pulę i N ustawia „Edytuj”. Każde ćwiczenie planu można wymienić („Zmień ćwiczenie”).
 const FIRST_IN_PLAN = 'oczy';
-const getPlan = () => [FIRST_IN_PLAN, ...Store.pref('plan', DEFAULT_PLAN).filter((id) => id !== FIRST_IN_PLAN && EXERCISES.some((e) => e.id === id))];
-const setPlan = (ids) => Store.setPref('plan', [FIRST_IN_PLAN, ...EXERCISES.map((e) => e.id).filter((id) => id !== FIRST_IN_PLAN && ids.includes(id))]);
+const NOT_IN_POOL = [FIRST_IN_PLAN, 'test']; // test prędkości to pomiar, nie trening — można go dodać ręcznie do puli
+const exists = (id) => EXERCISES.some((e) => e.id === id);
+const planPool = () => (Store.pref('planPool', null) || EXERCISES.map((e) => e.id).filter((id) => !NOT_IN_POOL.includes(id)))
+  .filter((id) => id !== FIRST_IN_PLAN && exists(id));
+// Domyślna liczba = tyle, ile było w dawnym stałym planie (pref 'plan' zostaje nietknięty).
+const planCount = () => Store.pref('planCount', Math.max(1, (Store.pref('plan', null) || ['', 1, 2, 3, 4]).length - 1));
+/** Losuje ćwiczenia na dzień: najpierw te, których nie było w `prev`; `keep` zostają (np. już wykonane). */
+function drawPlan(prev = [], keep = []) {
+  const pool = planPool().filter((id) => !keep.includes(id));
+  const need = Math.max(0, Math.min(planCount(), planPool().length + keep.length) - keep.length);
+  const picked = [...shuffle(pool.filter((id) => !prev.includes(id))), ...shuffle(pool.filter((id) => prev.includes(id)))].slice(0, need);
+  let ids = [...keep, ...shuffle(picked)];
+  // Ten sam zestaw co wczoraj (mała pula)? Przynajmniej inna kolejność.
+  for (let i = 0; i < 5 && ids.length > 1 && ids.join() === prev.join(); i++) ids = shuffle(ids);
+  return ids;
+}
+function dayPlan() {
+  const today = dayKey();
+  let dp = Store.pref('dayPlan', null);
+  if (!dp || dp.day !== today) {
+    const prev = dp?.ids || [];
+    dp = { day: today, ids: drawPlan(prev), prev };
+    Store.setPref('dayPlan', dp);
+  }
+  return dp;
+}
+const getPlan = () => [FIRST_IN_PLAN, ...dayPlan().ids.filter((id) => id !== FIRST_IN_PLAN && exists(id))];
+/** Nowa pula / liczba: losuje dzisiejszy plan od nowa, zachowując ćwiczenia już dziś wykonane. */
+function setPlanPool(ids, count) {
+  Store.setPref('planPool', ids.filter((id) => id !== FIRST_IN_PLAN));
+  Store.setPref('planCount', count);
+  const dp = dayPlan();
+  const keep = dp.ids.filter((id) => Store.doneToday(id));
+  Store.setPref('dayPlan', { ...dp, ids: drawPlan(dp.prev || [], keep) });
+}
+/** Wymiana ćwiczenia w dzisiejszym planie na inne (to samo miejsce w kolejności). */
+function swapInPlan(oldId, newId) {
+  const dp = dayPlan();
+  Store.setPref('dayPlan', { ...dp, ids: dp.ids.map((id) => (id === oldId ? newId : id)) });
+}
 let currentEx = null; // id otwartego ćwiczenia (do przycisku „Następnie”)
 
 /* ---------- Wspólne elementy UI ---------- */
@@ -210,8 +248,24 @@ function screen(title, ex) {
   if (ex) {
     // Na ekranie ustawień: zapętlona symulacja ćwiczenia (krok co 100 ms, tylko gdy jest widoczna).
     const demo = makeDemo(ex.id, h);
+    // „Zmień ćwiczenie”: tylko dla ćwiczenia z dzisiejszego planu (poza Ruchem oczu), jeszcze niewykonanego.
+    const swapList = h('div', { class: 'swap-list', hidden: true });
+    const swapBtn = h('button', { class: 'link', onclick: () => {
+      if (!swapList.hidden) { swapList.hidden = true; return; }
+      const plan = getPlan();
+      swapList.replaceChildren(
+        h('p', { class: 'label' }, 'Wymień w planie dnia na:'),
+        ...EXERCISES.filter((e) => e.id !== FIRST_IN_PLAN && !plan.includes(e.id)).map((e) => h('button', {
+          class: 'pick', onclick: () => { swapInPlan(ex.id, e.id); location.hash = `#/ex/${e.id}`; },
+        }, h('span', { class: 'ico' }, e.icon), h('span', {}, e.name), Store.doneToday(e.id) ? h('small', { class: 'muted' }, 'dziś ✓') : null)));
+      swapList.hidden = false;
+    } }, '⇄ Zmień ćwiczenie');
+    const canSwap = () => ex.id !== FIRST_IN_PLAN && getPlan().includes(ex.id) && !Store.doneToday(ex.id);
     const hero = h('div', { class: 'ex-hero' }, demo.el,
-      h('button', { class: 'link tut-open', onclick: () => openTutorial(ex, h) }, '▶ Samouczek'));
+      h('div', { class: 'hero-links' },
+        h('button', { class: 'link', onclick: () => openTutorial(ex, h) }, '▶ Samouczek'),
+        canSwap() ? swapBtn : null),
+      swapList);
     const sig = current?.signal;
     const iv = setInterval(() => { if (hero.isConnected && document.visibilityState === 'visible') demo.step(); }, 100);
     sig?.addEventListener('abort', () => clearInterval(iv), { once: true });
@@ -366,6 +420,7 @@ function session(body, parentSignal, def) {
         h('div', { class: 'pause-title' }, '⏸ Pauza'),
         h('button', { class: 'btn primary big wide', onclick: resume }, '▶ Wznów'),
         h('button', { class: 'btn wide', onclick: begin }, '↻ Od nowa'),
+        h('button', { class: 'btn wide', onclick: () => { kill(); body.classList.remove('in-session'); gearAction = null; def.onSetup(); window.scrollTo(0, 0); } }, '⚙ Zmień ustawienia i zacznij od nowa'),
         h('button', { class: 'btn wide', onclick: stop }, '⏹ Zakończ i zapisz wynik'),
         h('button', { class: 'btn wide danger', onclick: () => { kill(); location.hash = '#/'; } }, '✕ Zakończ i nie zapisuj wyniku')));
     const controls = h('div', { class: 'controls' },
@@ -519,13 +574,14 @@ ex({
     let size = Store.pref('schulteSize', 5);
     if (!Store.pref('schulteDotRestored', false)) { Store.setPref('schulteDot', true); Store.setPref('schulteDotRestored', true); }
     let dot = Store.pref('schulteDot', true);
-    let mark = Store.pref('schulteMark', false);
+    // Zaznaczanie znalezionych liczb jest zawsze domyślnie włączone (wybór obowiązuje tylko do wyjścia z ćwiczenia).
+    let mark = true;
     const setup = () => body.replaceChildren(
       h('p', { class: 'label' }, 'Rozmiar tablicy'),
       chips([[3, '3×3'], [4, '4×4'], [5, '5×5'], [6, '6×6'], [7, '7×7']], size, (v) => { size = v; Store.setPref('schulteSize', v); }),
       h('p', { class: 'label' }, 'Opcje'),
       chips([[true, 'Kropka w środku'], [false, 'Bez kropki']], dot, (v) => { dot = v; Store.setPref('schulteDot', v); }),
-      chips([[false, 'Nie zaznaczaj'], [true, 'Zaznaczaj znalezione']], mark, (v) => { mark = v; Store.setPref('schulteMark', v); }),
+      chips([[false, 'Nie zaznaczaj'], [true, 'Zaznaczaj znalezione']], mark, (v) => { mark = v; }),
       startBtn(go), lastResult(`schulte-${size}`));
     const go = () => session(body, signal, {
       id: `schulte-${size}`, name: `Schulte ${size}×${size}`, unit: 'liczb', onSetup: setup,
@@ -561,16 +617,19 @@ ex({
 ex({
   id: 'sfera', group: 'Pole widzenia', icon: '◎', name: 'Widzenie sferyczne',
   short: 'Rozpoznaj znak błyskający na obwodzie',
-  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Potem w środku koła zobaczysz pytanie: „litera” albo „cyfra” — wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. 3 trafienia z rzędu = poziom w górę (większy promień, krótszy czas), błąd = poziom w dół.',
+  how: 'Patrz wyłącznie na krzyżyk w środku koła. Na ułamek sekundy w środku pojawi się cyfra, a gdzieś na okręgu litera. Potem w środku koła zobaczysz pytanie: „litera” albo „cyfra” — wybierz, co widziałeś. Czasem pytanie dotyczy cyfry ze środka — to pilnuje, żebyś nie uciekał wzrokiem. 3 trafienia z rzędu = poziom w górę (większy promień, krótszy czas, a od poziomu 6 i 11 dodatkowa litera na obwodzie), błąd = poziom w dół. Gdy liter jest kilka, wybierz którąkolwiek z nich.',
   score: 'Liczba trafień w 1 minutę. Poziom zapamiętuje się — kolejna sesja startuje od miejsca, w którym skończyłeś.',
   why: 'Ćwiczy widzenie peryferyjne we wszystkich kierunkach naraz (stąd „sferyczne”). Bardzo krótki czas ekspozycji (poniżej ok. 200 ms — tyle trwa zaplanowanie i wykonanie ruchu oka) wyklucza przesunięcie wzroku — rozpoznajesz znak wyłącznie peryferyjnie.',
   run(body, signal) {
     const MAX = 14; const LETTERS = 'ABCDEFHKLMNPRSTUWZ';
     let items = Store.pref('sferaItems', 1);
+    // Trudność rośnie też liczbą liter na obwodzie: +1 litera od poziomu 6 i od poziomu 11 (najwyżej 5).
+    const lettersAt = (L) => Math.min(5, items + Math.floor((L - 1) / 5));
+    const lettersTxt = (n) => `${n} ${n === 1 ? 'litera' : n < 5 ? 'litery' : 'liter'}`;
     const setup = () => body.replaceChildren(
-      h('p', { class: 'label' }, 'Liczba liter na obwodzie'),
+      h('p', { class: 'label' }, 'Liczba liter na obwodzie (na start)'),
       chips([[1, '1 litera'], [2, '2 litery'], [3, '3 litery']], items, (v) => { items = v; Store.setPref('sferaItems', v); setup(); }),
-      levelInfo(`sfera-${items}`, MAX, setup, (L) => `promień ${Math.round(Math.min(0.92, 0.18 + L * 0.056) * 100)}% pola · znak widoczny ${Math.max(70, 200 - L * 10)} ms`),
+      levelInfo(`sfera-${items}`, MAX, setup, (L) => `${lettersTxt(lettersAt(L))} · promień ${Math.round(Math.min(0.92, 0.18 + L * 0.056) * 100)}% pola · znak widoczny ${Math.max(70, 200 - L * 10)} ms`),
       startBtn(go), lastResult(`sfera-${items}`));
     const go = () => session(body, signal, {
       id: `sfera-${items}`, name: `Widzenie sferyczne · ${items} ${items === 1 ? 'litera' : 'litery'}`, unit: 'trafień', onSetup: setup,
@@ -585,14 +644,15 @@ ex({
         while (api.alive) {
           const radius = Math.min(0.92, 0.18 + api.level * 0.056);
           const exposure = Math.max(70, 200 - api.level * 10);
-          status.replaceChildren(h('span', { class: 'muted' }, `promień ${Math.round(radius * 100)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
+          const count = lettersAt(api.level);
+          status.replaceChildren(h('span', { class: 'muted' }, `${lettersTxt(count)} · promień ${Math.round(radius * 100)}%`), h('span', { class: 'muted' }, `${exposure} ms`));
           answers.replaceChildren();
           await api.sleep(450);
           const center = String(rand(1, 9));
-          const letters = shuffle([...LETTERS]).slice(0, items);
+          const letters = shuffle([...LETTERS]).slice(0, count);
           const a0 = Math.random() * Math.PI * 2;
           const nodes = letters.map((l, i) => {
-            const a = a0 + (i * Math.PI * 2) / items;
+            const a = a0 + (i * Math.PI * 2) / count;
             return h('div', { class: 'blip', style: `left:${50 + Math.cos(a) * radius * 50}%;top:${50 + Math.sin(a) * radius * 50}%` }, l);
           });
           const c = h('div', { class: 'blip center' }, center);
@@ -850,7 +910,16 @@ ex({
           if (!api.alive) return;
           const good = ans === same;
           api.answer(good); flash(field, good);
-          if (!good) { answers.replaceChildren(h('p', { class: 'muted center-text' }, `${a}  |  ${b}`)); await api.sleep(700); }
+          if (!good) {
+            // Poprawna odpowiedź pokazana tak jak w ćwiczeniu, ale w ustawieniu poziomu 1 (blisko osi, dłużej).
+            const d1 = Math.min(44, 9 + 1 * 3.2);
+            const mark = (w, other) => [...w].map((ch, i) => (ch !== [...other][i] ? h('u', { class: 'diff' }, ch) : ch));
+            const L1 = h('div', { class: 'word-l reveal', style: `right:${50 + d1}%` }, ...mark(a, b));
+            const R1 = h('div', { class: 'word-r reveal', style: `left:${50 + d1}%` }, ...mark(b, a));
+            field.append(L1, R1);
+            answers.replaceChildren(h('p', { class: 'reveal-note center-text' }, same ? 'Były takie same' : 'Były różne'));
+            try { await api.sleep(1600); } finally { L1.remove(); R1.remove(); }
+          }
         }
       },
     });
@@ -1284,7 +1353,8 @@ function planSection() {
         : plan.length ? h('p', { class: 'plan-done' }, '🎉 Plan na dziś wykonany') : null);
   };
   const edit = () => {
-    const sel = new Set(getPlan());
+    const sel = new Set(planPool());
+    let n = Math.min(planCount(), Math.max(1, sel.size));
     const ordered = [EXERCISES.find((e) => e.id === FIRST_IN_PLAN), ...EXERCISES.filter((e) => e.id !== FIRST_IN_PLAN)];
     const list = h('div', { class: 'plan-edit' }, ...ordered.map((e) => {
       if (e.id === FIRST_IN_PLAN) {
@@ -1294,18 +1364,29 @@ function planSection() {
         class: 'pick' + (sel.has(e.id) ? ' on' : ''), onclick: () => {
           if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id);
           row.classList.toggle('on', sel.has(e.id));
-          count.textContent = `${sel.size} × 1 min`;
+          drawCount();
         },
       }, h('span', { class: 'box' }), h('span', { class: 'ico' }, e.icon), h('span', {}, e.name));
       return row;
     }));
-    const count = h('span', { class: 'muted' }, `${sel.size} × 1 min`);
+    const countBox = h('div', {});
+    const info = h('span', { class: 'muted' });
+    const drawCount = () => {
+      const max = Math.max(1, sel.size); n = Math.min(n, max);
+      countBox.replaceChildren(chips(Array.from({ length: Math.min(8, max) }, (_, i) => [i + 1, String(i + 1)]), n, (v) => { n = v; info.textContent = `${n + 1} × 1 min`; }));
+      info.textContent = `${n + 1} × 1 min`;
+    };
+    drawCount();
     wrap.replaceChildren(
-      h('div', { class: 'plan-head' }, h('h2', {}, 'Wybierz ćwiczenia na dziś'), count),
+      h('div', { class: 'plan-head' }, h('h2', {}, 'Plan dnia — losowanie'), info),
+      h('p', { class: 'muted small' }, 'Codziennie losuję ćwiczenia z zaznaczonych poniżej, w miarę możliwości inne niż wczoraj. Ruch oczu jest zawsze pierwszy.'),
+      h('p', { class: 'label' }, 'Ile ćwiczeń losować (oprócz Ruchu oczu)'),
+      countBox,
+      h('p', { class: 'label' }, 'Losuj spośród'),
       list,
       h('div', { class: 'row' },
-        h('button', { class: 'btn', onclick: () => { setPlan(DEFAULT_PLAN); view(); } }, 'Domyślny'),
-        h('button', { class: 'btn primary', onclick: () => { setPlan([...sel]); view(); } }, 'Zapisz')));
+        h('button', { class: 'btn', onclick: view }, 'Anuluj'),
+        h('button', { class: 'btn primary', disabled: false, onclick: () => { if (!sel.size) { alert('Zaznacz przynajmniej jedno ćwiczenie.'); return; } setPlanPool([...sel], n); view(); } }, 'Zapisz i losuj')));
   };
   if (Store.pref('openPlanEdit', false)) { Store.setPref('openPlanEdit', false); edit(); } else view();
   return wrap;
@@ -1537,7 +1618,7 @@ route();
  * jeśli nie zainstalujesz, instaluje się sama przy pierwszym uruchomieniu po nocy (po 3:00), jak aktualizacje z App Store.
  * Aktualizacja wymienia wyłącznie pliki aplikacji — wyniki, poziomy, plan i biblioteka zostają nietknięte. */
 const Updates = {
-  reg: null, bar: null,
+  reg: null, bar: null, applying: false,
   /** Czy od chwili wykrycia aktualizacji minęła godzina 3:00 (noc)? */
   nightPassed(since) {
     const d = new Date(since); d.setHours(3, 0, 0, 0);
@@ -1547,7 +1628,7 @@ const Updates = {
   apply() {
     const w = Updates.reg?.waiting; if (!w) return;
     delete Store.data.prefs.updSeen; Store.save();
-    Updates.bar?.remove();
+    Updates.bar?.remove(); Updates.applying = true;
     w.postMessage('skipWaiting'); // po przejęciu strony przez nową wersję: przeładowanie (controllerchange)
   },
   check() {
@@ -1565,7 +1646,7 @@ const Updates = {
     document.body.append(Updates.bar);
   },
   async init() {
-    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    if (!('serviceWorker' in navigator) || !isSecureContext) return;
     try { Updates.reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }); } catch { return; }
     if (CHANNEL !== 'prod') return;
     const reg = Updates.reg;
@@ -1573,8 +1654,8 @@ const Updates = {
       const w = reg.installing;
       w?.addEventListener('statechange', () => { if (w.state === 'installed') Updates.check(); });
     });
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
+    // Przeładowanie tylko po zatwierdzeniu aktualizacji (nie przy pierwszej instalacji).
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (Updates.applying) { Updates.applying = false; location.reload(); } });
     Updates.check();
     reg.update().catch(() => {});
     document.addEventListener('visibilitychange', () => {

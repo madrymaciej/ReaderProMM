@@ -279,7 +279,7 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
 /* Schulte: znacznik środka za cyfrą (nieparzyste) albo w szczelinie (parzyste) */
 .focus-dot { width: 6px !important; height: 6px !important; margin: -3px !important; opacity: .9 !important; box-shadow: none !important; }
 .cell.center-cell { position: relative; isolation: isolate; }
-.cell.center-cell::before { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%;
+.cell.center-cell::before { content: ''; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; border-radius: 50%;
   background: var(--pivot); opacity: .85; z-index: -1; }
 
 /* Widzenie sferyczne: pytanie nad kołem, krótko także w środku */
@@ -713,9 +713,9 @@ html.standalone { --safari-bar: 0px; }
 .pick.locked { cursor: default; opacity: .85; }
 .pick.locked small { margin-left: auto; }
 
-/* Schulte: mała kropka w środku tablicy, nad cyframi (mniejsza niż wcześniej: 4 px) */
-.schulte .focus-dot { z-index: 2; width: 4px !important; height: 4px !important; margin: -2px !important; opacity: 1 !important;
-  box-shadow: 0 0 0 1.5px var(--surface) !important; }
+/* Schulte: kropka w środku tablicy, nad cyframi (10 px) */
+.schulte .focus-dot { z-index: 2; width: 10px !important; height: 10px !important; margin: -5px !important; opacity: 1 !important;
+  box-shadow: 0 0 0 2px var(--surface) !important; }
 
 /* ---------- Niepasujące pary ---------- */
 .np-head { display: flex; justify-content: space-between; align-items: flex-end; }
@@ -768,3 +768,16 @@ html.standalone { --safari-bar: 0px; }
 .update-bar > span { flex: 1; display: flex; flex-direction: column; line-height: 1.25; font-size: 14px; }
 .update-bar small { color: var(--muted); font-size: 12px; }
 .update-bar .btn { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+
+/* Pary słów: po błędzie — poprawna para przy osi (poziom 1), różniące się litery podkreślone */
+.word-l.reveal, .word-r.reveal { color: var(--accent); }
+.word-l.reveal .diff, .word-r.reveal .diff { color: var(--bad); text-decoration-thickness: 2px; }
+.reveal-note { margin: 0; font-weight: 700; color: var(--bad); }
+
+/* Ekran ćwiczenia: Samouczek + Zmień ćwiczenie; lista do wymiany w planie dnia */
+.hero-links { display: flex; justify-content: center; gap: 18px; margin-top: 6px; font-size: 14px; }
+.swap-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.swap-list[hidden] { display: none; }
+.swap-list .label { margin: 0 0 2px; }
+.swap-list .pick small { margin-left: auto; }
+.ex-hero .swap-list .ico { display: grid; place-items: center; width: 28px; height: 28px; font-size: 15px; }
