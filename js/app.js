@@ -370,8 +370,8 @@ function session(body, parentSignal, def) {
     const controls = h('div', { class: 'controls' },
       h('div', { class: 'ctl-row' },
         h('button', { class: 'btn ctl', onclick: pause, 'aria-label': 'Pauza' }, '⏸ Pauza'),
-        h('div', { class: 'ctl-info' }, timeEl, h('span', { class: 'muted' }, `${def.unit}: `, scoreEl)),
-        h('button', { class: 'btn ctl ctl-spacer', tabindex: -1, 'aria-hidden': 'true' }, '⏸ Pauza')),
+        h('div', { class: 'ctl-info' }, h('span', { class: 'muted' }, `${def.unit}: `, scoreEl)),
+        timeEl),
       st ? h('div', { class: 'lvl-row' }, lvlEl, dots, h('span', { class: 'muted small hint' }, `${UP_AFTER}× dobrze = ▲ · błąd = ▼`)) : null,
       h('div', { class: 'timebar' }, fill));
     body.classList.add('in-session');
@@ -968,18 +968,22 @@ ex({
 ex({
   id: 'oczy', group: 'Tempo', icon: '⋯', name: 'Ruch oczu',
   short: 'Podążaj wzrokiem za skaczącym punktem',
-  how: 'Trzymaj głowę nieruchomo i śledź punkt samymi oczami. Wybierz wzór i tempo. To dobra rozgrzewka przed pozostałymi ćwiczeniami.',
+  how: 'Trzymaj głowę nieruchomo i śledź punkt samymi oczami. Wybierz wzór, tempo startowe i przyspieszanie — punkt skacze coraz szybciej co 10 s. To dobra rozgrzewka przed pozostałymi ćwiczeniami.',
   score: 'Liczba skoków wykonanych w 1 minutę — rośnie, gdy zwiększasz tempo.',
   why: 'Czytanie to seria precyzyjnych skoków oczu (sakkad). Ćwiczenie uczy szybkiego, celnego przenoszenia wzroku i skraca czas „lądowania” na kolejnej fiksacji — szczególnie przy przejściu na początek następnej linijki.',
   run(body, signal) {
     let mode = Store.pref('eyeMode', 'h'); let bpm = Store.pref('eyeBpm', 90);
+    // Przyspieszanie: o ile skoków/min rośnie tempo co RAMP_EVERY sekund (0 = stałe tempo).
+    let ramp = Store.pref('eyeRamp', 10); const RAMP_EVERY = 10; const MAX_BPM = 240;
     const setup = () => {
       const lbl = h('b', {}, bpm);
       body.replaceChildren(
         h('p', { class: 'label' }, 'Wzór'),
         chips([['h', 'Poziomo'], ['v', 'Pionowo'], ['d', 'Przekątne'], ['z', 'Linijki (Z)'], ['r', 'Losowo']], mode, (v) => { mode = v; Store.setPref('eyeMode', v); }),
-        h('p', { class: 'label' }, 'Tempo: ', lbl, ' skoków/min'),
+        h('p', { class: 'label' }, 'Tempo na start: ', lbl, ' skoków/min'),
         h('input', { type: 'range', min: 40, max: 240, step: 10, value: bpm, oninput: (e) => { bpm = +e.target.value; lbl.textContent = bpm; Store.setPref('eyeBpm', bpm); } }),
+        h('p', { class: 'label' }, 'Przyspieszanie'),
+        chips([['0', 'Stałe tempo'], ['10', '+10 co 10 s'], ['20', '+20 co 10 s']], String(ramp), (v) => { ramp = +v; Store.setPref('eyeRamp', ramp); }),
         startBtn(go), lastResult('oczy'));
     };
     const go = () => session(body, signal, {
@@ -987,35 +991,44 @@ ex({
       lines: (x) => [x.bpmStart !== x.bpm ? `Tempo: ${x.bpmStart} → ${x.bpm} skoków/min` : `Tempo: ${x.bpm} skoków/min`],
       start(stage, api) {
         Object.assign(api.extra, { bpm, bpmStart: bpm });
+        // Tempo bieżące = tempo bazowe (−/+ w trakcie) + przyrost za każde pełne RAMP_EVERY s ćwiczenia.
+        const curBpm = () => Math.min(MAX_BPM, bpm + ramp * Math.floor(api.elapsed() / RAMP_EVERY));
         // Pełny ekran w poziomie. Safari na iOS nie pozwala zablokować orientacji, więc przy telefonie
         // trzymanym pionowo cała plansza jest obrócona o 90° — wystarczy obrócić iPhone'a.
         try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch { /* iOS: brak obsługi */ }
         const dot = h('div', { class: 'dot' });
-        const time = h('b', { class: 'mono' }); const score = h('span', { class: 'muted' });
+        const time = h('b', { class: 'mono time' }); const score = h('span', { class: 'muted' });
         const speedEl = h('span', { class: 'eye-bpm' }, h('b', { class: 'mono' }, bpm), h('small', {}, 'skoków/min'));
-        let iv = null;
-        // Zmiana tempa w trakcie: od razu działa, zapisuje się jako tempo na następną sesję.
+        let to = null; let shown = 0;
+        const showBpm = () => {
+          const v = curBpm(); if (v === shown) return;
+          if (shown) { speedEl.classList.remove('up'); void speedEl.offsetWidth; speedEl.classList.add('up'); }
+          shown = v; speedEl.firstChild.textContent = v; api.extra.bpm = v;
+        };
+        // Następny skok planowany po każdym poprzednim — odstęp wynika z bieżącego tempa.
+        const schedule = () => { clearTimeout(to); to = setTimeout(() => { tick(); schedule(); }, 60000 / curBpm()); };
+        // Zmiana tempa w trakcie: od razu działa; tempo bazowe zapisuje się jako tempo startowe następnej sesji.
         const setBpm = (v) => {
-          bpm = Math.min(240, Math.max(40, v)); Store.setPref('eyeBpm', bpm); api.extra.bpm = bpm;
-          speedEl.firstChild.textContent = bpm;
-          clearInterval(iv); iv = setInterval(tick, 60000 / bpm);
+          bpm = Math.min(MAX_BPM, Math.max(40, v)); Store.setPref('eyeBpm', bpm);
+          showBpm(); schedule();
         };
         const full = h('div', { class: 'eye-full' },
           h('div', { class: 'eye-field' }, dot),
           h('div', { class: 'eye-hud' },
-            h('span', {}, time, ' · ', score),
+            h('span', { class: 'eye-btns' },
+              h('button', { class: 'btn ctl', onclick: () => api.pause() }, '⏸ Pauza'), score),
             h('span', { class: 'eye-speed' },
               h('button', { class: 'btn ctl', 'aria-label': 'Wolniej', onclick: () => setBpm(bpm - 10) }, '−'),
               speedEl,
               h('button', { class: 'btn ctl', 'aria-label': 'Szybciej', onclick: () => setBpm(bpm + 10) }, '+')),
-            h('span', { class: 'eye-btns' },
-              h('button', { class: 'btn ctl', onclick: () => api.pause() }, '⏸ Pauza'),
-            )),
+            time),
           h('div', { class: 'eye-hint' }, '↻ Obróć iPhone\'a poziomo'));
         document.body.append(full);
         document.documentElement.classList.add('eye-mode');
         const hud = setInterval(() => {
-          time.textContent = `${Math.max(0, Math.ceil(DURATION - api.elapsed()))} s`;
+          const left = Math.max(0, Math.ceil(DURATION - api.elapsed()));
+          time.textContent = `${left} s`; time.classList.toggle('warn', left <= 10);
+          showBpm();
           score.textContent = `skoków: ${Math.max(0, k - 1)}`;
         }, 200);
         api.signal.addEventListener('abort', () => {
@@ -1039,9 +1052,8 @@ ex({
           const [x, y] = pos(); dot.style.left = x + '%'; dot.style.top = y + '%'; k++;
           if (k > 1) api.add();
         };
-        tick();
-        iv = setInterval(tick, 60000 / bpm);
-        api.signal.addEventListener('abort', () => clearInterval(iv));
+        showBpm(); tick(); schedule();
+        api.signal.addEventListener('abort', () => clearTimeout(to));
       },
     });
     setup();

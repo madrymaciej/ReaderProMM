@@ -202,6 +202,8 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
 .ctl-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
 .btn.ctl { min-height: 40px; padding: 6px 12px; font-size: 15px; }
 .ctl-info { display: flex; flex-direction: column; align-items: center; line-height: 1.2; font-size: 14px; }
+/* Licznik czasu: zawsze w prawym górnym rogu ćwiczenia */
+.ctl-row > .time { justify-self: end; min-width: 64px; text-align: right; }
 .time { font-size: 22px; font-weight: 700; }
 .time.warn { color: var(--bad); }
 .score { font-size: 15px; }
@@ -309,6 +311,8 @@ h2.group.big { margin-top: 18px; font-size: 18px; text-transform: none; letter-s
   .in-session .controls { position: static; padding: 0; gap: 10px; align-self: center; }
   .in-session .ctl-row { grid-template-columns: 1fr; gap: 8px; }
   .in-session .ctl-info { order: -1; }
+  .screen-body.in-session { position: relative; }
+  .in-session .ctl-row > .time { position: absolute; top: 4px; right: 16px; z-index: 4; }
   .in-session .lvl-row { flex-direction: column; gap: 4px; }
   .in-session .hint { display: none; }
   .in-session .stage { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 20px; min-width: 0; }
@@ -518,7 +522,8 @@ html.eye-mode, html.eye-mode body { overflow: hidden; }
 .eye-field { position: relative; flex: 1; margin: 6px 10px 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .eye-field .dot { width: 26px; height: 26px; margin: -13px; }
 .eye-hud { order: -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px 0; font-size: 15px; }
-.eye-btns { display: flex; gap: 8px; }
+.eye-btns { display: flex; align-items: center; gap: 10px; }
+.eye-hud .time { min-width: 64px; text-align: right; }
 .eye-btns .btn { min-height: 34px; padding: 4px 10px; font-size: 14px; }
 .eye-hint { display: none; }
 /* Telefon trzymany pionowo: obróć całą planszę o 90°, by zajęła ekran „w poziomie” */
@@ -536,6 +541,7 @@ html.eye-mode, html.eye-mode body { overflow: hidden; }
 .eye-speed .btn { min-height: 34px; width: 44px; padding: 0; font-size: 22px; }
 .eye-bpm { display: flex; flex-direction: column; align-items: center; line-height: 1.05; min-width: 70px; }
 .eye-bpm small { font-size: 10px; color: var(--muted); }
+.eye-bpm.up b { display: inline-block; animation: bump .6s; }
 
 /* ---------- Ćwiczenia mieszczą się nad dolnym paskiem Safari ---------- */
 /* W karcie Safari (nie z ekranu początkowego) pływający pasek adresu zasłania dół ekranu. */
@@ -576,9 +582,6 @@ html.standalone { --safari-bar: 0px; }
   .field { height: calc(var(--fh) - 6px); }
 }
 
-/* Niewidoczny odpowiednik przycisku Pauza po prawej — licznik zostaje na środku */
-.ctl-spacer { visibility: hidden; pointer-events: none; }
-@media (orientation: landscape) and (max-height: 560px) { .ctl-spacer { display: none; } }
 
 /* ---------- Ikona przy nazwie ćwiczenia + symulacja na ekranie ustawień ---------- */
 .bar h1 { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
