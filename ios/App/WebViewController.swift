@@ -5,7 +5,9 @@ import WebKit
 /// przekazywanie tekstów z rozszerzenia „Udostępnij”, blokada wygaszania ekranu, eksport kopii danych.
 final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     static let appHost = "madrymaciej.github.io"
-    static let appURL = URL(string: "https://madrymaciej.github.io/SzybkieCzytanie/")!
+    // PROD: aplikacja na iPhonie korzysta z wydanej wersji (/prod/). Wersja web (TEST) jest pod /SzybkieCzytanie/.
+    // Ta sama domena = te same dane (localStorage, IndexedDB) — zmiana ścieżki ich nie kasuje.
+    static let appURL = URL(string: "https://madrymaciej.github.io/SzybkieCzytanie/prod/")!
 
     private var webView: WKWebView!
     private var pageLoaded = false
